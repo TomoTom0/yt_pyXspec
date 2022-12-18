@@ -8,6 +8,7 @@ class ytpx():
     ## init
     def __init__(self, dir_path=None):
         if os.path.isdir(dir_path):
+            print(f"change directory to {dir_path}")
             os.chdir(dir_path)
         self.findXcm(dir_path)
         
@@ -23,7 +24,7 @@ class ytpx():
         #self.gridspec=_gridspec
     def findXcm(self, dir_path=None):
         valid_dir_path=dir_path or self.dir_path
-        xcms=glob2.glob(dir_path+"/*.xcm") if dir_path is not None else []
+        xcms=glob2.glob(valid_dir_path+"/*.xcm") if valid_dir_path is not None else []
         self.xcms=xcms
         return xcms
     # Disable
@@ -134,9 +135,9 @@ class ytpx():
             xyss_ss={}
             for key_xcm, xcm_path in xcm_paths.items():
                 self.loadXcm(xcm_path)
-                xyss_ss[key_xcm]=obtain_xyss(plots=plots_dic[key_xcms])
+                xyss_ss[key_xcm]=self.obtain_xyss(plots=plots_dic[key_xcms])
 
-            xyss_s_dic[key_xcms]=combine_xyss_ss(xyss_ss=xyss_ss)
+            xyss_s_dic[key_xcms]=self.combine_xyss_ss(xyss_ss=xyss_ss)
         return xyss_s_dic
 
     def combine_xyss_ss(self, xyss_ss={}, sortKeys=[]):

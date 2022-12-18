@@ -38,6 +38,7 @@ ytpx=yt_pyXspec.ytpx(dir_path)
 xcm_paths=["AAAA.xcm", "BBBB.xcm"]
 
 # plot graph from xcm paths and export as image file
+# plots allows [eeu, eem, ld, del, ratio]
 fig_axs_dic=ytpx.plot_xyss_fromXcms(
     xcms=xcm_paths,
     title_func=title_func,

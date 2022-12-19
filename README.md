@@ -50,7 +50,7 @@ fig_axs_dic=ytpx.plot_xyss_fromXcms(
 
 ## Contact
 
-email: tomoIris427+Github@gamil.com
+email: tomoIris427+Github@gmail.com
 
 ## LICENSE
 

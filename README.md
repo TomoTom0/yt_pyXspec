@@ -51,50 +51,52 @@ fig_axs_dic=ytpx.plot_xyss_fromXcms(
 
 ### arguments for plot_xyss
 
-plots
-: iterable; `["eeu", "ld"]`
- plot graphs of the inputed type
- allowed values are `"eeu", "eem", "ld", "del", "ratio"`
+#### plots
+- iterable; `["eeu", "ld"]`
+- plot graphs of the inputed type
+- allowed values are `"eeu", "eem", "ld", "del", "ratio"`
 
-x_lim
-: iterable; `[range_min, range_max]`
- a range of x-axis
- if not inputted, the range is determined by the value of data
+#### x_lim
+- iterable; `[range_min, range_max]`
+- a range of x-axis
+- if not inputted, the range is determined by the value of data
 
-y_lims
-: dict; `{"eeu": [range_min, range_max], "ld":[range_min, range_max]}`
- ranges of y-axis for plot types
- if not inputted, the range is determined by the value of data
+#### y_lims
+- dict; `{"eeu": [range_min, range_max], "ld":[range_min, range_max]}`
+- ranges of y-axis for plot types
+- if not inputted, the range is determined by the value of data
 
-colors
-: iterable; `["royalblue", "red", "oliverdrab"]`
- a color set of plot
- check the reference of matplotlib to know valid values
+#### colors
+- iterable; `["royalblue", "red", "oliverdrab"]`
+- a color set of plot
+- check the reference of matplotlib to know valid values
 
-markers
-: iterable; `["^", "o", "+"]`
- a marker set of plot
- check the reference of matplotlib.pyplot.scatter to know valid values
+#### markers
+- iterable; `["^", "o", "+"]`
+- a marker set of plot
+- check the reference of matplotlib.pyplot.scatter to know valid values
+
+#### xyss_s
+- dict `{"eeu": xyss}`
+- if not inputted, xyss_s are obtained from the present pyXspec environments
+- if you use `plot_xyss_fromXcms`, you should not input `xyss_s`
+
+#### exportImagePath
+- str `"/home/XXXXXXXXXXX/AAA.pdf"`
+- if not inputed, a image of the graph is not exported
+- check the reference of matplotlib.pyplot.figure.savefig to know allowed extensions
+- if you use `plot_xyss_fromXcms`, you should use `exportImagePath_func`
+
+#### title
+- str `"AAAAAAA"`
+- a title on the top of the graph
+- if not inputed, there is no title
+- if you use `plot_xyss_fromXcms`, you should use `title_func`
+
+#### __others
 
 legends_dic
 legends_sort
-
-xyss_s
-: dict `{"eeu": xyss}`
-if not inputted, xyss_s are obtained from the present pyXspec environments
-if you use `plot_xyss_fromXcms`, you should not input `xyss_s`
-
-exportImagePath
-: str `"/home/XXXXXXXXXXX/AAA.pdf"`
- if not inputed, a image of the graph is not exported
- check the reference of matplotlib.pyplot.figure.savefig to know allowed extensions
- if you use `plot_xyss_fromXcms`, you should use `exportImagePath_func`
-
-title
-: str `"AAAAAAA"`
- a title on the top of the graph
- if not inputed, there is no title
- if you use `plot_xyss_fromXcms`, you should use `title_func`
 
 flag_dataPlot: True
 flag_modelPlot: True

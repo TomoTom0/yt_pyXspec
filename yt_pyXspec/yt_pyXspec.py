@@ -18,13 +18,15 @@ class ytpx():
         self.Xset=xspec.Xset
         self.Fit=xspec.Fit
         self.plt=_plt
+        self.xspec=xspec
         self.default_exportImagePath=None
         self.__initMatplotlibRcParams()
         self.__initXspecPlot()
         #self.gridspec=_gridspec
-    def findXcm(self, dir_path=None):
+    def findXcm(self, dir_path=None, keyword=None):
         valid_dir_path=dir_path or self.dir_path
-        xcms=glob2.glob(valid_dir_path+"/*.xcm") if valid_dir_path is not None else []
+        valid_keyword=keyword or  "*.xcm"
+        xcms=glob2.glob(valid_dir_path+"/"+valid_keyword) if valid_dir_path is not None else []
         self.xcms=xcms
         return xcms
     # Disable
@@ -201,7 +203,7 @@ class ytpx():
         markers=[],
         legends_dic={},
         legends_sort=[],
-        xyss_s_in=None,
+        xyss_s=None,
         exportImagePath=None, **kwargs_in):
 
         # kwargs
@@ -231,7 +233,7 @@ class ytpx():
 
         fig = plt.figure()
         fig.patch.set_facecolor("white")
-        xyss_s = xyss_s_in or obtain_xyss(plots=plots)
+        xyss_s_valid = xyss_s or obtain_xyss(plots=plots)
             
         subplots = []
 
@@ -240,8 +242,10 @@ class ytpx():
                             2 if s in ["eeu", "eem", "ld"] else 1 for s in plots])
 
         for gs_tmp, plot_type in zip(gs, plots):
-            xyss = xyss_s[plot_type]
-            y_lim=y_lims.get(plot_type, None)
+            xyss = xyss_s_valid.get(plot_type, None)
+            if xyss is None:
+                continue
+            
             # the fisrt subplot
             ax = plt.subplot(gs_tmp)
             subplots.append(ax)
@@ -265,6 +269,8 @@ class ytpx():
                             for key_xy in ["x", "y"]}
             ax.set_xlim(lims_fromValue["xs"])
             ax.set_ylim(lims_fromValue["ys"])
+
+            y_lim=y_lims.get(plot_type, None)
             if hasattr(x_lim, "__iter__") and not len(x_lim)<2:
                 ax.set_xlim(x_lim)
             if hasattr(y_lim, "__iter__") and not len(y_lim)<2:

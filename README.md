@@ -95,17 +95,17 @@ fig_axs_dic=ytpx.plot_xyss_fromXcms(
 
 #### __others
 
-legends_dic
-legends_sort
+- legends_dic
+- legends_sort
 
-flag_dataPlot: True
-flag_modelPlot: True
-flag_compPlot: True
-flag_modelStep: False
-marker_size_data: 0
-elinewith_data: 1
-marker_size_mdoel: 0
-elinewidth_model: 0.5
+- flag_dataPlot: True
+- flag_modelPlot: True
+- flag_compPlot: True
+- flag_modelStep: False
+- marker_size_data: 0
+- elinewith_data: 1
+- marker_size_mdoel: 0
+- elinewidth_model: 0.5
 
 ## Contact
 

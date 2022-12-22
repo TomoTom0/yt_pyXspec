@@ -165,7 +165,7 @@ class ytpx():
             return False
         isFile_OK = (os.path.isfile(path) and os.access(path, os.W_OK))
         isNotExist_OK = (os.path.isdir(os.path.split(path)[0]) and not os.path.exists(path))
-        return isFile_OK and isNotExist_OK
+        return isFile_OK or isNotExist_OK
 
     def __extractValues(self, xyss):
         sum_dic={}

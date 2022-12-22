@@ -199,7 +199,7 @@ class ytpx():
         plots=["eeu"],
         x_lim=[],
         y_lims={},     
-        colors=["royalblue", "red", "oliverdrab", "turqoise", "orange", "chartreuse", "navy" ,"firebrick", "darkgreen", "darkmagenta"], 
+        colors=["royalblue", "red", "olivedrab", "turqoise", "orange", "chartreuse", "navy" ,"firebrick", "darkgreen", "darkmagenta"], 
         markers=[],
         legends_dic={},
         legends_sort=[],

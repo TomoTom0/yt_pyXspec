@@ -108,9 +108,14 @@ class ytpx():
             xyss_dic[xcm_path] = xyss_now
         return xyss_dic
 
+    def _obtainAdditiveComps(self, model):
+        comps = [model.__dict__[s] for s in model.componentNames]
+        return [comp for comp in comps if "norm" in comp.parameterNames]
+
     def obtain_xyss(self, plots=["eeu"]):
         Plot = self.Plot
         AllData = self.AllData
+        AllModels = self.AllModels
         plot_command = " ".join(plots)
         Plot(plot_command)
         xyss_s = {}
@@ -129,21 +134,39 @@ class ytpx():
                 if plot_type in {"eeu", "ld", "eem"}:
                     ys_model = Plot.model(plotGroup, plotWindow)
 
+                xyss_main = {
+                    "xs": xs, "ys": ys, "xe": xe,
+                    "ye": ye, "ys_model": ys_model,
+                    "labels":{
+                            key_xy: re.sub(r"\$([^\$]*)\$", r"$\\mathdefault{\1}$", label) 
+                              for key_xy, label in zip(["x", "y"], Plot.labels(plotGroup))
+                        },
+                    "log":{
+                            key_xy:_log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
+                        }
+                    }
+
                 # obtain comps in models
                 ys_comps = []
-                comp_N = 1
-                while True:
-                    try:
-                        ys_tmp = Plot.addComp(comp_N, plotGroup, plotWindow)
-                        comp_N += 1
-                        # execlude components with only 0
-                        if sum([1 for s in ys_tmp if s == 0]) == len(ys_tmp):
-                            continue
-                        ys_comps.append(ys_tmp)
-                    except:
-                        break
-                xyss[plotGroup] = {"xs": xs, "ys": ys, "xe": xe,
-                                   "ye": ye, "ys_model": ys_model, "ys_comps": ys_comps}
+                compNames = []
+                model = AllModels(plotGroup)
+                addComps = self._obtainAdditiveComps(model)
+                if len(addComps) <= 1:
+                    xyss_comp = {}
+                else:
+                    for ind_compAdd, compAdd in enumerate(addComps):
+                        try:
+                            ys_tmp = Plot.addComp(
+                                ind_compAdd+1, plotGroup, plotWindow)
+                            # execlude components with only 0
+                            if sum([1 for s in ys_tmp if s == 0]) == len(ys_tmp):
+                                continue
+                            ys_comps.append(ys_tmp)
+                            compNames.append(compAdd.name)
+                        except:
+                            break
+                    xyss_comp = {"ys_comps": ys_comps, "compNames": compNames}
+                xyss[plotGroup] = {**xyss_main, **xyss_comp}
             xyss_s[plot_type] = xyss
 
         return xyss_s
@@ -205,10 +228,13 @@ class ytpx():
         return sum_dic  # {"xs":xs_sum, "ys":ys_sum}
 
     def __obtainLim(self, values, logIsValid=True, margin_ratio=0.05):
-        v_min = min(values)
-        v_max = max(values)
+        valid_values=[s for s in values if (not logIsValid) or s>0]
+        if len(valid_values)==0:
+            return []
+        v_min = min(valid_values)
+        v_max = max(valid_values)
         if logIsValid is True:
-            margin = (np.log10(v_max)-np.log10(v_min))*0.05
+            margin = (np.log10(v_max)-np.log10(v_min))*margin_ratio
             return (10**(np.log10(np.array([v_min, v_max]))+np.array([-1, +1])*margin)).tolist()
         else:
             margin = (v_max-v_min)*0.05
@@ -219,7 +245,7 @@ class ytpx():
                   plots=["eeu"],
                   x_lim=[],
                   y_lims={},
-                  colors=["royalblue", "red", "olivedrab", "turqoise", "orange",
+                  colors=["royalblue", "red", "olivedrab", "turquoise", "orange",
                           "chartreuse", "navy", "firebrick", "darkgreen", "darkmagenta"],
                   markers=[],
                   legends_dic={},
@@ -285,9 +311,11 @@ class ytpx():
             xys_sum = self.__extractValues(xyss)
             scaleIsLog = {
                 "x": ax.get_xscale() == "log",
-                "y": ax.get_yscale() == "log"}
-            lims_fromValue = {key_xy+"s": self.__obtainLim(xys_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
-                              for key_xy in ["x", "y"]}
+                "y": ax.get_yscale() == "log"
+            }
+            lims_fromValue = {
+                key_xy+"s": self.__obtainLim(xys_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
+                for key_xy in ["x", "y"]}
             ax.set_xlim(lims_fromValue["xs"])
             ax.set_ylim(lims_fromValue["ys"])
 
@@ -298,17 +326,19 @@ class ytpx():
                 ax.set_ylim(y_lim)
 
             # set label
+            labels=xys_tmp.get("labels", "")
             plt.subplots_adjust(hspace=.0)
             if not gs_tmp == gs[-1]:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_xminorticklabels(), visible=False)
             else:
-                plt.xlabel("Energy (keV)")
-            ylabel_dic = {"eeu": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
-                          "eem": "$EF_\mathdefault{E}$ (keV$^2$)",
-                          "ld": "normalized counts s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$",
-                          "ratio": "ratio", "del": "residual"}
-            plt.ylabel(ylabel_dic[plot_type], fontsize=10)
+                ax.set_xlabel(labels.get("x", "Energy (keV)"))
+            ylabel_dic={}
+            #ylabel_dic = {"eeu": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
+            #            "eem": "$EF_\mathdefault{E}$ (keV$^2$)",
+            #            "ld": "normalized counts s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$",
+            #            "ratio": "ratio", "del": "residual"}
+            ax.set_ylabel(ylabel_dic.get(plot_type, labels.get("y", "")), fontsize=10)
 
             fig.align_labels()
 
@@ -320,8 +350,8 @@ class ytpx():
                 color = (colors+["black"]*(plotGroup+1))[plotGroup-1]
                 if plot_type in {"eeu", "eem", "ratio", "del", "ld"} and kwargs.get("flag_dataPlot") is True:
                     ys = xys_tmp["ys"]
-                    xe = xys_tmp["xe"]
-                    ye = xys_tmp["ye"]
+                    xe = xys_tmp.get("xe", [0]*len(xs))
+                    ye = xys_tmp.get("ye", [0]*len(ys))
                     marker_size = kwargs.get("marker_size_data", 0)
                     elinewith = kwargs.get("elinewidth_data", 1)
                     scatter_tmp = plt.scatter(
@@ -330,8 +360,8 @@ class ytpx():
                     plt.errorbar(xs, ys, yerr=ye, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                  ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                if plot_type in {"eeu", "eem", "ld"} and kwargs.get("flag_modelPlot") is True:
-                    ys_model = xys_tmp["ys_model"]
+                if plot_type in {"eeu", "eem", "ld"} and kwargs.get("flag_modelPlot") is True and "ys_model" in xys_tmp.keys():
+                    ys_model = xys_tmp.get("ys_model", [])
                     # plt.plot(xs, ys_model, color=color)
                     # plt.scatter(xs, ys_model, color=color, marker="_")
                     xems = sorted(zip(xs, xe, ys_model), key=lambda x: x[0])
@@ -355,8 +385,8 @@ class ytpx():
                         plt.errorbar(xs, ys_model, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                      ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                if kwargs.get("flag_compPlot") is True:
-                    ys_comps = xys_tmp["ys_comps"]
+                if kwargs.get("flag_compPlot") is True and "ys_comps" in xys_tmp.keys():
+                    ys_comps = xys_tmp.get("ys_comps", [[]])
                     for ys_comp in ys_comps:
                         plt.plot(xs, ys_comp, linestyle="dotted",
                                  color=color)
@@ -409,88 +439,90 @@ class ytpx():
         return return_dic
 
     def obtainParamsPerComp(self, model):
-        comps=[model.__dict__[s] for s in model.componentNames]
-        return sum([[{"param":comp.__dict__[s], "comp":comp} for s in comp.parameterNames] for comp in comps], [])
+        comps = [model.__dict__[s] for s in model.componentNames]
+        return sum([[{"param": comp.__dict__[s], "comp":comp} for s in comp.parameterNames] for comp in comps], [])
 
     def _obtainELF(self, error, frozen, link):
-        error_str="/".join(map(str, error))
-        elf="frozen" if frozen else ( link if link!="" else error_str)
+        error_str = "/".join(map(str, error))
+        elf = "frozen" if frozen else (link if link != "" else error_str)
         return elf
 
     def obtainInfoParam(self, param, info_comp={}, info_model={}, flag_forPrint=False):
         ind_param_start = info_model.get("startParIndex", None)
-        _ind_dict={
-                "ind_param":param.index,
-                "ind_param_total":param.index+ind_param_start - 1 if ind_param_start is not None else "None",
-                "ind_comp":info_comp.get("ind", "None"),
-                "ind_model":info_model.get("ind", "None"),
-            }
-        _info_param_dict={
-            "ind":{
-                "i_p":_ind_dict["ind_param"],
-                "i_pT":_ind_dict["ind_param_total"],
-                "i_c":_ind_dict["ind_comp"],
-                "i_m":_ind_dict["ind_model"],
+        _ind_dict = {
+            "ind_param": param.index,
+            "ind_param_total": param.index+ind_param_start - 1 if ind_param_start is not None else "None",
+            "ind_comp": info_comp.get("ind", "None"),
+            "ind_model": info_model.get("ind", "None"),
+        }
+        _info_param_dict = {
+            "ind": {
+                "i_p": _ind_dict["ind_param"],
+                "i_pT": _ind_dict["ind_param_total"],
+                "i_c": _ind_dict["ind_comp"],
+                "i_m": _ind_dict["ind_model"],
             } if flag_forPrint is True else _ind_dict,
-            "main":{
-                "name_comp":info_comp.get("name", "None"),
-                "name_param":param.name,
-                "unit":param.unit, 
-                "value":param.values[0]
+            "main": {
+                "name_comp": info_comp.get("name", "None"),
+                "name_param": param.name,
+                "unit": param.unit,
+                "value": param.values[0]
             },
-            "forNotPrint":{} if flag_forPrint is True else {
-                "error":param.error[:2],
-                "frozen":param.frozen,
-                "link":param.link},
-            "elf":{
-                "elf":self._obtainELF(error=param.error[:2], frozen=param.frozen, link=param.link)
+            "forNotPrint": {} if flag_forPrint is True else {
+                "error": param.error[:2],
+                "frozen": param.frozen,
+                "link": param.link},
+            "elf": {
+                "elf": self._obtainELF(error=param.error[:2], frozen=param.frozen, link=param.link)
             }
         }
         return {**_info_param_dict["ind"], **_info_param_dict["main"], **_info_param_dict["forNotPrint"], **_info_param_dict["elf"]}
 
     def obtainInfoParamsAll(self, flag_forPrint=False, flag_oneOnly=False):
-        AllModels=self.AllModels
-        AllData=self.AllData
+        AllModels = self.AllModels
+        AllData = self.AllData
 
-        nGroups=AllData.nGroups
-        models=[AllModels(ind_model) for ind_model in range(1, nGroups+1)]
+        nGroups = AllData.nGroups
+        models = [AllModels(ind_model) for ind_model in range(1, nGroups+1)]
 
-        _info_paramss=[[
+        _info_paramss = [[
             self.obtainInfoParam(
                 paramAndComp["param"],
                 info_comp={
-                    "ind":model.componentNames.index(paramAndComp["comp"].name)+1,
+                    "ind": model.componentNames.index(paramAndComp["comp"].name)+1,
                     "name":paramAndComp["comp"].name
                 },
                 info_model={
-                    "startParIndex":model.startParIndex,
-                    "ind":ind_model+1
+                    "startParIndex": model.startParIndex,
+                    "ind": ind_model+1
                 },
                 flag_forPrint=flag_forPrint
             ) for paramAndComp in self.obtainParamsPerComp(model)] for ind_model, model in enumerate(models)]
-        info_paramss=[_info_paramss[0]] if flag_oneOnly is True else _info_paramss
+        info_paramss = [_info_paramss[0]
+                        ] if flag_oneOnly is True else _info_paramss
         return info_paramss
-        
-    def showParamsAll(self, flag_oneOnly=False, max_width=100):
-        Fit=self.Fit
-        chisq=Fit.statistic/Fit.dof
 
-        info_paramss=self.obtainInfoParamsAll(flag_forPrint=True, flag_oneOnly=flag_oneOnly)
+    def showParamsAll(self, flag_oneOnly=False, max_width=100):
+        Fit = self.Fit
+        chisq = Fit.statistic/Fit.dof
+
+        info_paramss = self.obtainInfoParamsAll(
+            flag_forPrint=True, flag_oneOnly=flag_oneOnly)
 
         # table
-        table=texttable.Texttable(max_width=max_width)
+        table = texttable.Texttable(max_width=max_width)
         table.set_deco(texttable.Texttable.HEADER)
-        table.set_cols_align(["r", "r","r", "r", "l", "l", "l", "l", "l"])
-        header=list(info_paramss[0][0].keys())
+        table.set_cols_align(["r", "r", "r", "r", "l", "l", "l", "l", "l"])
+        header = list(info_paramss[0][0].keys())
         table.add_rows([header]+sum(sum([[[
-            [""]*(len(header))],[list(s.values()) for s in info_params]] 
+            [""]*(len(header))], [list(s.values()) for s in info_params]]
             for ind_model, info_params in enumerate(info_paramss)], []), []))
         print(table.draw()+f"\n\t\tReduced Chi-Squared: {chisq}")
 
     def showParamsAll_xspec(self, flag_oneOnly=False):
-        AllModels=self.AllModels
-        Fit=self.Fit
-        
+        AllModels = self.AllModels
+        Fit = self.Fit
+
         if flag_oneOnly is True:
             AllModels(1).show()
         else:
@@ -498,17 +530,18 @@ class ytpx():
         Fit.show()
 
     def calcFluxLumin(self, cmdStr, flag_flux=True, flag_omit=True):
-        AllModels=self.AllModels
-        AllData=self.AllData
-        nGroups=AllData.nGroups
+        AllModels = self.AllModels
+        AllData = self.AllData
+        nGroups = AllData.nGroups
 
         if flag_flux is True:
             AllModels.calcFlux(cmdStr)
         else:
             AllModels.calcLumin(cmdStr)
-        output=[AllModels(ind_model).flux if flag_flux is True else AllModels(ind_model).lumin for ind_model in range(1, nGroups+1)]
-        
-        if flag_omit is True and all(s==output[0] for s in output):
+        output = [AllModels(ind_model).flux if flag_flux is True else AllModels(
+            ind_model).lumin for ind_model in range(1, nGroups+1)]
+
+        if flag_omit is True and all(s == output[0] for s in output):
             return [output[0]]
 
         return output

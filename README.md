@@ -33,7 +33,7 @@ def exportImagePath_func(xcm_path):
     return os.path.split(xcm_path)[1].replace(".xcm", ".pdf")
 
 # automatically chage directory to dir_path
-ytpx=yt_pyXspec.ytpx(dir_path)
+ytpx=yt_pyXspec.Ytpx(dir_path)
 
 # select xcm paths whose plot you want to export as image file
 # in the appropriate method; glob2.glob("all_doublePow*2022-04-*.xcm")

@@ -187,10 +187,10 @@ class Ytpx():
 
         return datass
 
-    def obtain_datass_dic(self, xcm_paths_dic, plots_dic):
+    def obtain_datass_dic(self, xcms_dic, plots_dic):
         Xset = self.Xset
         datass_dic = {}
-        for key_xcms, xcm_paths in xcm_paths_dic.items():
+        for key_xcms, xcm_paths in xcms_dic.items():
             datass_s = {}
             for key_xcm, xcm_path in xcm_paths.items():
                 self.loadXcm(xcm_path)
@@ -445,7 +445,7 @@ class Ytpx():
             print(f"Figure is saved as {valid_exportImagePath}")
         return fig, subplots
 
-    def plot_datas_fromXcms(self, xcms=[], title_func=None, flag_titleIsXcmpath=False, exportImagePath_func=None, **kwargs_in):
+    def plot_datass_fromXcms(self, xcms=[], title_func=None, flag_titleIsXcmpath=False, exportImagePath_func=None, **kwargs_in):
         return_dic = {}
         for xcm_path in xcms:
             loadSuccess = self.loadXcm(xcm_path=xcm_path)
@@ -463,7 +463,7 @@ class Ytpx():
                 kwargs_add["exportImagePath"] = exportImagePath_func(xcm_path)
 
             kwargs_now = {**kwargs_in, **kwargs_add}
-            fig, subplots = self.plot_datas(**kwargs_now)
+            fig, subplots = self.plot_datass(**kwargs_now)
             return_dic[xcm_path] = {"fig": fig, "subplots": subplots}
         return return_dic
 

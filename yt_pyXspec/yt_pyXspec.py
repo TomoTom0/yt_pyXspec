@@ -106,7 +106,7 @@ class Ytpx():
         datas_dic = {}
         for xcm_path in xcms:
             self.loadXcm(xcm_path)
-            datas_now = self.obtain_datas(**kwargs_in)
+            datas_now = self.obtain_datass(**kwargs_in)
             datas_dic[xcm_path] = datas_now
         return datas_dic
 
@@ -194,7 +194,7 @@ class Ytpx():
             datass_s = {}
             for key_xcm, xcm_path in xcm_paths.items():
                 self.loadXcm(xcm_path)
-                datass_s[key_xcm] = self.obtain_datas(
+                datass_s[key_xcm] = self.obtain_datass(
                     plots=plots_dic[key_xcms])
 
             datass_dic[key_xcms] = self.combine_datass_s(datass_s=datass_s)

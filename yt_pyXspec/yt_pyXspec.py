@@ -2,9 +2,10 @@
 import os
 import re
 import sys
-import shutil
+#import shutil
 import glob2
 import texttable
+import warnings
 import xspec
 import numpy as np
 import matplotlib.pyplot as _plt
@@ -98,107 +99,116 @@ class ytpx():
         self.xcm = xcm_path
         return True
 
-    # # obtain_xyss
-    def obtain_xyss_s_fromXcms(self, xcms=[], **kwargs_in):
+    # # obtain_datass
+    def obtain_datass_s_fromXcms(self, xcms=[], **kwargs_in):
         # plots
-        xyss_dic = {}
+        datas_dic = {}
         for xcm_path in xcms:
             self.loadXcm(xcm_path)
-            xyss_now = self.obtain_xyss(**kwargs_in)
-            xyss_dic[xcm_path] = xyss_now
-        return xyss_dic
+            datas_now = self.obtain_datas(**kwargs_in)
+            datas_dic[xcm_path] = datas_now
+        return datas_dic
 
     def _obtainAdditiveComps(self, model):
         comps = [model.__dict__[s] for s in model.componentNames]
         return [comp for comp in comps if "norm" in comp.parameterNames]
 
-    def obtain_xyss(self, plots=["eeu"]):
+    def obtain_datass(self, plots=["eeu"]):
         Plot = self.Plot
         AllData = self.AllData
         AllModels = self.AllModels
         plot_command = " ".join(plots)
         Plot(plot_command)
-        xyss_s = {}
+        datass = {}
 
         for plotWindow_tmp, plot_type in enumerate(plots):
             plotWindow = plotWindow_tmp+1
-            xyss = {}
-            xs, ys, xe, ye, ys_model, ys_comps = [[]]*6
+            datas = {}
+            datas_info = {
+                "labels":{
+                        key_xy: re.sub(r"\$([^\$]*)\$", r"$\\mathdefault{\1}$", label) 
+                            for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
+                    },
+                "log":{
+                        key_xy:_log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
+                    },
+                "model":AllModels(1).expression,
+                "plotWindow":plotWindow
+            }
+
+            #xs, ys, xe, ye, ys_model, ys_comps = [[]]*6
             for plotGroup in range(1, AllData.nGroups+1):
-                xs = Plot.x(plotGroup, plotWindow)
-                if plot_type in {"eeu", "ld", "ratio", "del"}:
-                    ys = Plot.y(plotGroup, plotWindow)
-                    xe = Plot.xErr(plotGroup, plotWindow)
-                    ye = Plot.yErr(plotGroup, plotWindow)
+                dataFuncs_dict={
+                    "xs":Plot.x,
+                    "ys":Plot.y,
+                    "xe":Plot.xErr,
+                    "ye":Plot.yErr,
+                    "ys_model":Plot.model
+                }
+                datas_data={}
+                for key_data, dataFunc in dataFuncs_dict.items():
+                    try:
+                        warnings.simplefilter("ignore")
+                        data_obtained=dataFunc(plotGroup, plotWindow)
+                        warnings.resetwarnings()
+                        datas_data[key_data]=data_obtained
+                    except Exception as e:
+                        pass
 
-                if plot_type in {"eeu", "ld", "eem"}:
-                    ys_model = Plot.model(plotGroup, plotWindow)
-
-                xyss_main = {
-                    "xs": xs, "ys": ys, "xe": xe,
-                    "ye": ye, "ys_model": ys_model,
-                    "labels":{
-                            key_xy: re.sub(r"\$([^\$]*)\$", r"$\\mathdefault{\1}$", label) 
-                              for key_xy, label in zip(["x", "y"], Plot.labels(plotGroup))
-                        },
-                    "log":{
-                            key_xy:_log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
-                        }
-                    }
+                model = AllModels(plotGroup)
 
                 # obtain comps in models
-                ys_comps = []
+                comps_obtained = []
                 compNames = []
-                model = AllModels(plotGroup)
                 addComps = self._obtainAdditiveComps(model)
                 if len(addComps) <= 1:
-                    xyss_comp = {}
+                    datas_comp = {}
                 else:
                     for ind_compAdd, compAdd in enumerate(addComps):
                         try:
-                            ys_tmp = Plot.addComp(
+                            comp_tmp = Plot.addComp(
                                 ind_compAdd+1, plotGroup, plotWindow)
                             # execlude components with only 0
-                            if sum([1 for s in ys_tmp if s == 0]) == len(ys_tmp):
+                            if all(s==0 for s in comp_tmp):
                                 continue
-                            ys_comps.append(ys_tmp)
+                            comps_obtained.append(comp_tmp)
                             compNames.append(compAdd.name)
                         except:
                             break
-                    xyss_comp = {"ys_comps": ys_comps, "compNames": compNames}
-                xyss[plotGroup] = {**xyss_main, **xyss_comp}
-            xyss_s[plot_type] = xyss
+                    datas_comp = {"ys_comps": comps_obtained, "compNames": compNames}
+                datas[plotGroup] = {**datas_data, **datas_comp}
+            datass[plot_type] = {"data":datas, "info":datas_info}
 
-        return xyss_s
+        return datass
 
-    def obtain_xyss_s_dic(self, xcm_paths_dic, plots_dic):
+    def obtain_datass_dic(self, xcm_paths_dic, plots_dic):
         Xset = self.Xset
-        xyss_s_dic = {}
+        datass_dic = {}
         for key_xcms, xcm_paths in xcm_paths_dic.items():
-            xyss_ss = {}
+            datass_s = {}
             for key_xcm, xcm_path in xcm_paths.items():
                 self.loadXcm(xcm_path)
-                xyss_ss[key_xcm] = self.obtain_xyss(plots=plots_dic[key_xcms])
+                datass_s[key_xcm] = self.obtain_datas(plots=plots_dic[key_xcms])
 
-            xyss_s_dic[key_xcms] = self.combine_xyss_ss(xyss_ss=xyss_ss)
-        return xyss_s_dic
+            datass_dic[key_xcms] = self.combine_datass_s(datass_s=datass_s)
+        return datass_dic
 
-    def combine_xyss_ss(self, xyss_ss={}, sortKeys=[]):
-        xyss_s_new = {}
+    def combine_datass_s(self, datass_s={}, sortKeys=[]):
+        datass_new = {}
         dataIndexs = {}
-        if set(sortKeys) == set(xyss_ss.keys()):
-            xyss_ss_list = [xyss_ss[k] for k in sortKeys]
+        if set(sortKeys) == set(datass_s.keys()):
+            datass_s_list = [datass_s[k] for k in sortKeys]
         else:
-            xyss_ss_list = list(xyss_ss.values())
-        for xyss_s in xyss_ss_list:
-            for plotName, xyss_dicts in xyss_s.items():
-                if plotName not in xyss_s_new.keys():
+            datass_s_list = list(datass_s.values())
+        for datass in datass_s_list:
+            for plotName, datas_dicts in datass.items():
+                if plotName not in datass_new.keys():
                     dataIndexs[plotName] = 1
-                    xyss_s_new[plotName] = {}
-                for xyss_dict in xyss_dicts.values():
-                    xyss_s_new[plotName][dataIndexs[plotName]] = xyss_dict
+                    datass_new[plotName] = {}
+                for datas_dict in datas_dicts.values():
+                    datass_new[plotName][dataIndexs[plotName]] = datas_dict
                     dataIndexs[plotName] += 1
-        return xyss_s_new
+        return datass_new
 
     # # sub functions for plot
     def __checkWritableFilePath(self, path):
@@ -209,12 +219,12 @@ class ytpx():
                          [0]) and not os.path.exists(path))
         return isFile_OK or isNotExist_OK
 
-    def __extractValues(self, xyss):
+    def __extractValues(self, datas):
         sum_dic = {}
         for key_xy in ["x", "y"]:
-            valss = [s.get(key_xy+"s", []) for s in xyss.values()]
-            errss = [s.get(key_xy+"e", []) for s in xyss.values()]
-            models = [s.get(key_xy+"s_model", []) for s in xyss.values()]
+            valss = [s.get(key_xy+"s", []) for s in datas.values()]
+            errss = [s.get(key_xy+"e", []) for s in datas.values()]
+            models = [s.get(key_xy+"s_model" , []) for s in datas.values()]
             sum_tmp = []
             for vals, errs in zip(valss, errss):
                 if len(errs) == len(vals):
@@ -223,8 +233,8 @@ class ytpx():
                 else:
                     sum_tmp += vals
             sum_dic[key_xy+"s"] = sum_tmp+sum(models, [])
-            # xs_sum=sum([np.array(s["xs"]*2)+np.array(s["xe"]*2)*np.array([1]*len(s["xe"])+[-1]*len(s["xe"])) for s in xys["eeu"].values()], [])
-            # ys_sum=sum([np.array(s["ys"]*2)+np.array(s["ye"]*2)*np.array([1]*len(s["ye"])+[-1]*len(s["ye"])) for s in xys["eeu"].values()], [])
+            # xs_sum=sum([np.array(s["xs"]*2)+np.array(s["xe"]*2)*np.array([1]*len(s["xe"])+[-1]*len(s["xe"])) for s in data["eeu"].values()], [])
+            # ys_sum=sum([np.array(s["ys"]*2)+np.array(s["ye"]*2)*np.array([1]*len(s["ye"])+[-1]*len(s["ye"])) for s in data["eeu"].values()], [])
         return sum_dic  # {"xs":xs_sum, "ys":ys_sum}
 
     def __obtainLim(self, values, logIsValid=True, margin_ratio=0.05):
@@ -240,8 +250,8 @@ class ytpx():
             margin = (v_max-v_min)*0.05
             return ((np.array([v_min, v_max]))+np.array([-1, +1])*margin).tolist()
 
-    # # plot xyss
-    def plot_xyss(self,
+    # # plot datass
+    def plot_datass(self,
                   plots=["eeu"],
                   x_lim=[],
                   y_lims={},
@@ -250,7 +260,7 @@ class ytpx():
                   markers=[],
                   legends_dic={},
                   legends_sort=[],
-                  xyss_s=None,
+                  datass=None,
                   exportImagePath=None, **kwargs_in):
 
         # kwargs
@@ -269,18 +279,18 @@ class ytpx():
 
         plt = self.plt
         default_exportImagePath = self.default_exportImagePath
-        obtain_xyss = self.obtain_xyss
+        obtain_datass = self.obtain_datass
         checkWritableFilePath = self.__checkWritableFilePath
         valid_exportImagePath = ([s for s in [
                                  exportImagePath, default_exportImagePath] if checkWritableFilePath(s)]+[None])[0]
 
-        plots_diff = set(plots)-{"eeu", "eem", "ratio", "del", "ld"}
-        if len(plots_diff) >= 1:
-            print(", ".join(list(plots_diff))+" are not appropriate")
+        #plots_diff = set(plots)-{"eeu", "eem", "ratio", "del", "ld"}
+        #if len(plots_diff) >= 1:
+        #    print(", ".join(list(plots_diff))+" are not appropriate")
 
         fig = plt.figure()
         fig.patch.set_facecolor("white")
-        xyss_s_valid = xyss_s or obtain_xyss(plots=plots)
+        datass_valid = datass or obtain_datass(plots=plots)
 
         subplots = []
 
@@ -289,8 +299,10 @@ class ytpx():
             2 if s in ["eeu", "eem", "ld"] else 1 for s in plots])
 
         for gs_tmp, plot_type in zip(gs, plots):
-            xyss = xyss_s_valid.get(plot_type, None)
-            if xyss is None:
+            dataInfos = datass_valid.get(plot_type, None)
+            datas = dataInfos.get("data") if isinstance(dataInfos, dict) else None
+            info = dataInfos.get("info", {}) if isinstance(dataInfos, dict) else None
+            if datas is None:
                 continue
 
             # the fisrt subplot
@@ -298,23 +310,27 @@ class ytpx():
             subplots.append(ax)
 
             # set scale
-            ax.set_xscale("log")
+            logFunc_dict={"x":ax.set_xscale,"y":ax.set_yscale}
+            for key_xy in ["x", "y"]:
+                if info.get("log", {}).get(key_xy, False) is True:
+                    logFunc_dict[key_xy]("log")
 
             if not plot_type in ["ratio", "del"]:
-                ax.set_yscale("log")
+                #ax.set_yscale("log")
+                pass
             elif plot_type in ["ratio"]:
                 plt.axhline(1, ls=":", lw=1., color="black", alpha=1, zorder=0)
             elif plot_type in ["del"]:
                 plt.axhline(0, ls=":", lw=1., color="black", alpha=1, zorder=0)
 
             # set lim
-            xys_sum = self.__extractValues(xyss)
+            data_sum = self.__extractValues(datas)
             scaleIsLog = {
                 "x": ax.get_xscale() == "log",
                 "y": ax.get_yscale() == "log"
             }
             lims_fromValue = {
-                key_xy+"s": self.__obtainLim(xys_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
+                key_xy+"s": self.__obtainLim(data_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
                 for key_xy in ["x", "y"]}
             ax.set_xlim(lims_fromValue["xs"])
             ax.set_ylim(lims_fromValue["ys"])
@@ -326,7 +342,7 @@ class ytpx():
                 ax.set_ylim(y_lim)
 
             # set label
-            labels=xys_tmp.get("labels", "")
+            labels=info.get("labels", "")
             plt.subplots_adjust(hspace=.0)
             if not gs_tmp == gs[-1]:
                 plt.setp(ax.get_xticklabels(), visible=False)
@@ -344,14 +360,15 @@ class ytpx():
 
             # ## plot eeu
             scatters = []
-            for plotGroup, xys_tmp in xyss.items():
-                xs = xys_tmp["xs"]
+            for plotGroup, data_tmp in datas.items():
+                #data
+                xs = data_tmp["xs"]
                 marker = (markers+["o"]*(plotGroup+1))[plotGroup-1]
                 color = (colors+["black"]*(plotGroup+1))[plotGroup-1]
-                if plot_type in {"eeu", "eem", "ratio", "del", "ld"} and kwargs.get("flag_dataPlot") is True:
-                    ys = xys_tmp["ys"]
-                    xe = xys_tmp.get("xe", [0]*len(xs))
-                    ye = xys_tmp.get("ye", [0]*len(ys))
+                if kwargs.get("flag_dataPlot") is True and "ys" in data_tmp.keys(): # plot_type in {"eeu", "eem", "ratio", "del", "ld"} and 
+                    ys = data_tmp["ys"]
+                    xe = data_tmp.get("xe", [0]*len(xs))
+                    ye = data_tmp.get("ye", [0]*len(ys))
                     marker_size = kwargs.get("marker_size_data", 0)
                     elinewith = kwargs.get("elinewidth_data", 1)
                     scatter_tmp = plt.scatter(
@@ -360,8 +377,8 @@ class ytpx():
                     plt.errorbar(xs, ys, yerr=ye, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                  ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                if plot_type in {"eeu", "eem", "ld"} and kwargs.get("flag_modelPlot") is True and "ys_model" in xys_tmp.keys():
-                    ys_model = xys_tmp.get("ys_model", [])
+                if kwargs.get("flag_modelPlot") is True and "ys_model" in data_tmp.keys(): # plot_type in {"eeu", "eem", "ld"} and 
+                    ys_model = data_tmp.get("ys_model", [])
                     # plt.plot(xs, ys_model, color=color)
                     # plt.scatter(xs, ys_model, color=color, marker="_")
                     xems = sorted(zip(xs, xe, ys_model), key=lambda x: x[0])
@@ -385,8 +402,8 @@ class ytpx():
                         plt.errorbar(xs, ys_model, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                      ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                if kwargs.get("flag_compPlot") is True and "ys_comps" in xys_tmp.keys():
-                    ys_comps = xys_tmp.get("ys_comps", [[]])
+                if kwargs.get("flag_compPlot") is True and "ys_comps" in data_tmp.keys():
+                    ys_comps = data_tmp.get("ys_comps", [[]])
                     for ys_comp in ys_comps:
                         plt.plot(xs, ys_comp, linestyle="dotted",
                                  color=color)
@@ -416,7 +433,7 @@ class ytpx():
             print(f"Figure is saved as {valid_exportImagePath}")
         return fig, subplots
 
-    def plot_xyss_fromXcms(self, xcms=[], title_func=None, flag_titleIsXcmpath=False, exportImagePath_func=None, **kwargs_in):
+    def plot_datas_fromXcms(self, xcms=[], title_func=None, flag_titleIsXcmpath=False, exportImagePath_func=None, **kwargs_in):
         return_dic = {}
         for xcm_path in xcms:
             loadSuccess = self.loadXcm(xcm_path=xcm_path)
@@ -434,9 +451,11 @@ class ytpx():
                 kwargs_add["exportImagePath"] = exportImagePath_func(xcm_path)
 
             kwargs_now = {**kwargs_in, **kwargs_add}
-            fig, subplots = self.plot_xyss(**kwargs_now)
+            fig, subplots = self.plot_datas(**kwargs_now)
             return_dic[xcm_path] = {"fig": fig, "subplots": subplots}
         return return_dic
+
+    # # parameter
 
     def obtainParamsPerComp(self, model):
         comps = [model.__dict__[s] for s in model.componentNames]

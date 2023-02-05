@@ -42,14 +42,14 @@ xcm_paths=["AAAA.xcm", "BBBB.xcm"]
 # plot graph from xcm paths and export as image file
 # plots allow "eeu", "eem", "ld", "del", "ratio"
 
-fig_axs_dic=ytpx.plot_xyss_fromXcms(
+fig_axs_dic=ytpx.plot_datas_fromXcms(
     xcms=xcm_paths,
     title_func=title_func,
     exportImagePath_func=exportImagePath_func,
     plots=["eeu", "del"])
 ```
 
-### arguments for plot_xyss
+### arguments for plot_datass
 
 #### plots
 - iterable; `["eeu", "ld"]`
@@ -76,22 +76,22 @@ fig_axs_dic=ytpx.plot_xyss_fromXcms(
 - a marker set of plot
 - check the reference of matplotlib.pyplot.scatter to know valid values
 
-#### xyss_s
-- dict `{"eeu": xyss}`
-- if not inputted, xyss_s are obtained from the present pyXspec environments
-- if you use `plot_xyss_fromXcms`, you should not input `xyss_s`
+#### datas_s
+- dict `{"eeu": datas}`
+- if not inputted, datas_s are obtained from the present pyXspec environments
+- if you use `plot_datas_fromXcms`, you should not input `datas_s`
 
 #### exportImagePath
 - str `"/home/XXXXXXXXXXX/AAA.pdf"`
 - if not inputed, a image of the graph is not exported
 - check the reference of matplotlib.pyplot.figure.savefig to know allowed extensions
-- if you use `plot_xyss_fromXcms`, you should use `exportImagePath_func`
+- if you use `plot_datas_fromXcms`, you should use `exportImagePath_func`
 
 #### title
 - str `"AAAAAAA"`
 - a title on the top of the graph
 - if not inputed, there is no title
-- if you use `plot_xyss_fromXcms`, you should use `title_func`
+- if you use `plot_datas_fromXcms`, you should use `title_func`
 
 #### __others
 

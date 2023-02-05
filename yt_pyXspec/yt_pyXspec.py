@@ -2,10 +2,11 @@
 import os
 import re
 import sys
-#import shutil
+# import shutil
 import glob2
 import texttable
 import warnings
+import pyperclip
 import xspec
 import numpy as np
 import matplotlib.pyplot as _plt
@@ -125,37 +126,40 @@ class ytpx():
             plotWindow = plotWindow_tmp+1
             datas = {}
             datas_info = {
-                "labels":{
-                        key_xy: re.sub(r"\$([^\$]*)\$", r"$\\mathdefault{\1}$", label) 
-                            for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
-                    },
-                "log":{
-                        key_xy:_log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
-                    },
-                "model":AllModels(1).expression,
-                "plotWindow":plotWindow
+                "labels": {
+                    key_xy: re.sub(r"\$([^\$]*)\$",
+                                   r"$\\mathdefault{\1}$", label)
+                    for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
+                },
+                "log": {
+                    key_xy: _log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
+                },
+                "model": AllModels(1).expression,
+                "plotWindow": plotWindow,
+                "xcm_fileName": self.xcm
             }
 
-            #xs, ys, xe, ye, ys_model, ys_comps = [[]]*6
+            # xs, ys, xe, ye, ys_model, ys_comps = [[]]*6
             for plotGroup in range(1, AllData.nGroups+1):
-                dataFuncs_dict={
-                    "xs":Plot.x,
-                    "ys":Plot.y,
-                    "xe":Plot.xErr,
-                    "ye":Plot.yErr,
-                    "ys_model":Plot.model
+                dataFuncs_dict = {
+                    "xs": Plot.x,
+                    "ys": Plot.y,
+                    "xe": Plot.xErr,
+                    "ye": Plot.yErr,
+                    "ys_model": Plot.model
                 }
-                datas_data={}
+                datas_data = {}
                 for key_data, dataFunc in dataFuncs_dict.items():
                     try:
                         warnings.simplefilter("ignore")
-                        data_obtained=dataFunc(plotGroup, plotWindow)
+                        data_obtained = dataFunc(plotGroup, plotWindow)
                         warnings.resetwarnings()
-                        datas_data[key_data]=data_obtained
+                        datas_data[key_data] = data_obtained
                     except Exception as e:
                         pass
 
                 model = AllModels(plotGroup)
+                datas_groupInfo = {"src_fileName": AllData(plotGroup).fileName}
 
                 # obtain comps in models
                 comps_obtained = []
@@ -169,15 +173,17 @@ class ytpx():
                             comp_tmp = Plot.addComp(
                                 ind_compAdd+1, plotGroup, plotWindow)
                             # execlude components with only 0
-                            if all(s==0 for s in comp_tmp):
+                            if all(s == 0 for s in comp_tmp):
                                 continue
                             comps_obtained.append(comp_tmp)
                             compNames.append(compAdd.name)
                         except:
                             break
-                    datas_comp = {"ys_comps": comps_obtained, "compNames": compNames}
-                datas[plotGroup] = {**datas_data, **datas_comp}
-            datass[plot_type] = {"data":datas, "info":datas_info}
+                    datas_comp = {"ys_comps": comps_obtained,
+                                  "compNames": compNames}
+                datas[plotGroup] = {**datas_groupInfo,
+                                    **datas_data, **datas_comp}
+            datass[plot_type] = {"data": datas, "info": datas_info}
 
         return datass
 
@@ -188,7 +194,8 @@ class ytpx():
             datass_s = {}
             for key_xcm, xcm_path in xcm_paths.items():
                 self.loadXcm(xcm_path)
-                datass_s[key_xcm] = self.obtain_datas(plots=plots_dic[key_xcms])
+                datass_s[key_xcm] = self.obtain_datas(
+                    plots=plots_dic[key_xcms])
 
             datass_dic[key_xcms] = self.combine_datass_s(datass_s=datass_s)
         return datass_dic
@@ -224,7 +231,7 @@ class ytpx():
         for key_xy in ["x", "y"]:
             valss = [s.get(key_xy+"s", []) for s in datas.values()]
             errss = [s.get(key_xy+"e", []) for s in datas.values()]
-            models = [s.get(key_xy+"s_model" , []) for s in datas.values()]
+            models = [s.get(key_xy+"s_model", []) for s in datas.values()]
             sum_tmp = []
             for vals, errs in zip(valss, errss):
                 if len(errs) == len(vals):
@@ -238,8 +245,8 @@ class ytpx():
         return sum_dic  # {"xs":xs_sum, "ys":ys_sum}
 
     def __obtainLim(self, values, logIsValid=True, margin_ratio=0.05):
-        valid_values=[s for s in values if (not logIsValid) or s>0]
-        if len(valid_values)==0:
+        valid_values = [s for s in values if (not logIsValid) or s > 0]
+        if len(valid_values) == 0:
             return []
         v_min = min(valid_values)
         v_max = max(valid_values)
@@ -252,16 +259,16 @@ class ytpx():
 
     # # plot datass
     def plot_datass(self,
-                  plots=["eeu"],
-                  x_lim=[],
-                  y_lims={},
-                  colors=["royalblue", "red", "olivedrab", "turquoise", "orange",
-                          "chartreuse", "navy", "firebrick", "darkgreen", "darkmagenta"],
-                  markers=[],
-                  legends_dic={},
-                  legends_sort=[],
-                  datass=None,
-                  exportImagePath=None, **kwargs_in):
+                    plots=["eeu"],
+                    x_lim=[],
+                    y_lims={},
+                    colors=["royalblue", "red", "olivedrab", "turquoise", "orange",
+                            "chartreuse", "navy", "firebrick", "darkgreen", "darkmagenta"],
+                    markers=[],
+                    legends_dic={},
+                    legends_sort=[],
+                    datass=None,
+                    exportImagePath=None, **kwargs_in):
 
         # kwargs
         kwargs_default = {
@@ -284,8 +291,8 @@ class ytpx():
         valid_exportImagePath = ([s for s in [
                                  exportImagePath, default_exportImagePath] if checkWritableFilePath(s)]+[None])[0]
 
-        #plots_diff = set(plots)-{"eeu", "eem", "ratio", "del", "ld"}
-        #if len(plots_diff) >= 1:
+        # plots_diff = set(plots)-{"eeu", "eem", "ratio", "del", "ld"}
+        # if len(plots_diff) >= 1:
         #    print(", ".join(list(plots_diff))+" are not appropriate")
 
         fig = plt.figure()
@@ -300,8 +307,10 @@ class ytpx():
 
         for gs_tmp, plot_type in zip(gs, plots):
             dataInfos = datass_valid.get(plot_type, None)
-            datas = dataInfos.get("data") if isinstance(dataInfos, dict) else None
-            info = dataInfos.get("info", {}) if isinstance(dataInfos, dict) else None
+            datas = dataInfos.get("data") if isinstance(
+                dataInfos, dict) else None
+            info = dataInfos.get("info", {}) if isinstance(
+                dataInfos, dict) else None
             if datas is None:
                 continue
 
@@ -310,13 +319,13 @@ class ytpx():
             subplots.append(ax)
 
             # set scale
-            logFunc_dict={"x":ax.set_xscale,"y":ax.set_yscale}
+            logFunc_dict = {"x": ax.set_xscale, "y": ax.set_yscale}
             for key_xy in ["x", "y"]:
                 if info.get("log", {}).get(key_xy, False) is True:
                     logFunc_dict[key_xy]("log")
 
             if not plot_type in ["ratio", "del"]:
-                #ax.set_yscale("log")
+                # ax.set_yscale("log")
                 pass
             elif plot_type in ["ratio"]:
                 plt.axhline(1, ls=":", lw=1., color="black", alpha=1, zorder=0)
@@ -342,30 +351,32 @@ class ytpx():
                 ax.set_ylim(y_lim)
 
             # set label
-            labels=info.get("labels", "")
+            labels = info.get("labels", "")
             plt.subplots_adjust(hspace=.0)
             if not gs_tmp == gs[-1]:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_xminorticklabels(), visible=False)
             else:
                 ax.set_xlabel(labels.get("x", "Energy (keV)"))
-            ylabel_dic={}
-            #ylabel_dic = {"eeu": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
+            ylabel_dic = {}
+            # ylabel_dic = {"eeu": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
             #            "eem": "$EF_\mathdefault{E}$ (keV$^2$)",
             #            "ld": "normalized counts s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$",
             #            "ratio": "ratio", "del": "residual"}
-            ax.set_ylabel(ylabel_dic.get(plot_type, labels.get("y", "")), fontsize=10)
+            ax.set_ylabel(ylabel_dic.get(
+                plot_type, labels.get("y", "")), fontsize=10)
 
             fig.align_labels()
 
             # ## plot eeu
             scatters = []
             for plotGroup, data_tmp in datas.items():
-                #data
+                # data
                 xs = data_tmp["xs"]
                 marker = (markers+["o"]*(plotGroup+1))[plotGroup-1]
                 color = (colors+["black"]*(plotGroup+1))[plotGroup-1]
-                if kwargs.get("flag_dataPlot") is True and "ys" in data_tmp.keys(): # plot_type in {"eeu", "eem", "ratio", "del", "ld"} and 
+                # plot_type in {"eeu", "eem", "ratio", "del", "ld"} and
+                if kwargs.get("flag_dataPlot") is True and "ys" in data_tmp.keys():
                     ys = data_tmp["ys"]
                     xe = data_tmp.get("xe", [0]*len(xs))
                     ye = data_tmp.get("ye", [0]*len(ys))
@@ -377,7 +388,8 @@ class ytpx():
                     plt.errorbar(xs, ys, yerr=ye, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                  ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                if kwargs.get("flag_modelPlot") is True and "ys_model" in data_tmp.keys(): # plot_type in {"eeu", "eem", "ld"} and 
+                # plot_type in {"eeu", "eem", "ld"} and
+                if kwargs.get("flag_modelPlot") is True and "ys_model" in data_tmp.keys():
                     ys_model = data_tmp.get("ys_model", [])
                     # plt.plot(xs, ys_model, color=color)
                     # plt.scatter(xs, ys_model, color=color, marker="_")
@@ -462,7 +474,7 @@ class ytpx():
         return sum([[{"param": comp.__dict__[s], "comp":comp} for s in comp.parameterNames] for comp in comps], [])
 
     def _obtainELF(self, error, frozen, link):
-        error_str = "/".join(map(str, error))
+        error_str = "_".join(map(str, error))
         elf = "frozen" if frozen else (link if link != "" else error_str)
         return elf
 
@@ -564,3 +576,40 @@ class ytpx():
             return [output[0]]
 
         return output
+
+    def obtainInfoParamForExport(self, header_selected=[], flag_showHeader=True, flag_oneOnly=False, flag_print=True, flag_copy=True):
+        Fit = self.Fit
+        info_stat = {
+            "stat": Fit.statistic,
+            "dof": Fit.dof,
+            "chisq": Fit.statistic/Fit.dof
+        }
+
+        info_paramss = self.obtainInfoParamsAll(
+            flag_forPrint=True, flag_oneOnly=flag_oneOnly)
+
+        add_info = {
+            "xcm": os.path.basename(self.xcm),
+            "chisq": "{}".format(info_stat["chisq"]),
+            "stat/dof": "{}/{}".format(info_stat["stat"], info_stat["dof"])
+        }
+
+        info_paramss[0][0] = {**info_paramss[0][0], **add_info}
+        if header_selected is not None and hasattr(header_selected, "__iter__"):
+            info_paramss = [[
+                {k: v for k, v in info_param.items()}
+                for info_param in info_params] for info_params in info_paramss]
+        table_header = "\t".join(
+            info_paramss[0][0].keys())+"\n" if flag_showHeader is True else ""
+        table_body = "\n".join(["\n".join(["\t".join(map(str, list(info_param.values(
+        )))) for info_param in info_params]) for info_params in info_paramss])
+
+        table_total = table_header+table_body
+
+        if flag_copy is True:
+            pyperclip.copy(table_total)
+        if flag_print is True:
+            string_method="copied to the clipboard and " if flag_copy is True else ""
+            print(f"\t\tThe following table is{string_method} returned, you will obtain the table by pasting it on spreadsheet.\n\n")
+            print(table_total)
+        return table_total

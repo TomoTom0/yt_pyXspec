@@ -13,7 +13,7 @@ import matplotlib.pyplot as _plt
 from matplotlib import gridspec
 
 
-class ytpx():
+class Ytpx():
     # # init
     def __init__(self, dir_path=None):
         self.dir_path = None

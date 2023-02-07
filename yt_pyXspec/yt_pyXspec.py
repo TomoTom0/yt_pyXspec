@@ -91,24 +91,31 @@ class Ytpx():
         plt.rcParams["font.size"] = 14  # フォントの大きさ
         plt.rcParams["axes.linewidth"] = 1.5  # 囲みの太さ
 
-    def loadXcm(self, xcm_path):
+    def loadXcm(self, xcm_path, verbose=0):
         if not os.path.isfile(xcm_path):
             return False
-        self.blockPrint()
+        orig_chatter = self.Xset.chatter
+        orig_logChatter = self.Xset.logChatter
+        if isinstance(verbose, int):
+            self.Xset.chatter = verbose
+            self.Xset.logChatter = verbose
+        # self.blockPrint()
         self.Xset.restore(xcm_path)
-        self.enablePrint()
+        # self.enablePrint()
+        self.Xset.logChatter = orig_logChatter
+        self.Xset.chatter = orig_chatter
         self.xcm = xcm_path
         return True
 
     # # obtain_datass
     def obtain_datass_s_fromXcms(self, xcms=[], **kwargs_in):
         # plots
-        datas_dic = {}
+        datass_s_dic = {}
         for xcm_path in xcms:
             self.loadXcm(xcm_path)
-            datas_now = self.obtain_datass(**kwargs_in)
-            datas_dic[xcm_path] = datas_now
-        return datas_dic
+            datass_now = self.obtain_datass(**kwargs_in)
+            datass_s_dic[xcm_path] = datass_now
+        return datass_s_dic
 
     def _obtainAdditiveComps(self, model):
         comps = [model.__dict__[s] for s in model.componentNames]
@@ -131,6 +138,7 @@ class Ytpx():
                                    r"$\\mathdefault{\1}$", label)
                     for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
                 },
+                "title":Plot.labels(plotWindow)[2],
                 "log": {
                     key_xy: _log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
                 },
@@ -151,9 +159,10 @@ class Ytpx():
                 datas_data = {}
                 for key_data, dataFunc in dataFuncs_dict.items():
                     try:
-                        warnings.simplefilter("ignore")
-                        data_obtained = dataFunc(plotGroup, plotWindow)
-                        warnings.resetwarnings()
+                        with warnings.catch_warnings():
+                            warnings.filterwarnings("ignore")
+                            data_obtained = dataFunc(plotGroup, plotWindow)
+                        #warnings.resetwarnings()
                         datas_data[key_data] = data_obtained
                     except Exception as e:
                         pass
@@ -165,25 +174,31 @@ class Ytpx():
                 comps_obtained = []
                 compNames = []
                 addComps = self._obtainAdditiveComps(model)
-                if len(addComps) <= 1:
-                    datas_comp = {}
-                else:
+                datas_comp = {}
+                if len(addComps) > 1:
                     for ind_compAdd, compAdd in enumerate(addComps):
                         try:
-                            comp_tmp = Plot.addComp(
-                                ind_compAdd+1, plotGroup, plotWindow)
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings("ignore")
+                                comp_tmp = Plot.addComp(
+                                    ind_compAdd+1, plotGroup, plotWindow)
                             # execlude components with only 0
                             if all(s == 0 for s in comp_tmp):
                                 continue
                             comps_obtained.append(comp_tmp)
                             compNames.append(compAdd.name)
-                        except:
+                        except Exception as e:
                             break
-                    datas_comp = {"ys_comps": comps_obtained,
-                                  "compNames": compNames}
+                    #warnings.resetwarnings()
+                    if len(compNames) > 0:
+                        datas_comp = {"ys_comps": comps_obtained,
+                                      "compNames": compNames}
                 datas[plotGroup] = {**datas_groupInfo,
                                     **datas_data, **datas_comp}
-            datass[plot_type] = {"data": datas, "info": datas_info}
+            datass[plot_type] = {
+                "info": datas_info,
+                "data": datas
+            }
 
         return datass
 
@@ -257,6 +272,23 @@ class Ytpx():
             margin = (v_max-v_min)*0.05
             return ((np.array([v_min, v_max]))+np.array([-1, +1])*margin).tolist()
 
+    def _categorizePlotType(self, plotType, categoryType="log"):
+                categorize_dict={
+                    "log":["lcounts", "ldata", 
+                           "ufspec", "eufspec", "eeufspec",
+                           "model", "emodel", "eemodel"],
+                    "big":["lcounts", "ldata", 
+                           "ufspec", "eufspec", "eeufspec",
+                           "model", "emodel", "eemodel",
+                           "counts", "data",
+                           "background", "chain", "contour",
+                           "dem", "eqw"]
+                }
+                return any(
+                    key.startswith(plotType) 
+                    for key in categorize_dict.get(categoryType, []))
+            
+
     # # plot datass
     def plot_datass(self,
                     plots=["eeu"],
@@ -303,7 +335,7 @@ class Ytpx():
 
         # set height ratios for sublots
         gs = gridspec.GridSpec(len(plots), 1, height_ratios=[
-            2 if s in ["eeu", "eem", "ld"] else 1 for s in plots])
+            2 if self._categorizePlotType(s, "big") else 1 for s in plots])
 
         for gs_tmp, plot_type in zip(gs, plots):
             dataInfos = datass_valid.get(plot_type, None)
@@ -323,10 +355,11 @@ class Ytpx():
             for key_xy in ["x", "y"]:
                 if info.get("log", {}).get(key_xy, False) is True:
                     logFunc_dict[key_xy]("log")
-
-            if not plot_type in ["ratio", "del"]:
-                # ax.set_yscale("log")
-                pass
+            
+            
+            if self._categorizePlotType(plot_type, "log"):
+                ax.set_yscale("log")
+                #pass
             elif plot_type in ["ratio"]:
                 plt.axhline(1, ls=":", lw=1., color="black", alpha=1, zorder=0)
             elif plot_type in ["del"]:
@@ -609,7 +642,8 @@ class Ytpx():
         if flag_copy is True:
             pyperclip.copy(table_total)
         if flag_print is True:
-            string_method="copied to the clipboard and " if flag_copy is True else ""
-            print(f"\t\tThe following table is{string_method} returned, you will obtain the table by pasting it on spreadsheet.\n\n")
+            string_method = "copied to the clipboard and " if flag_copy is True else ""
+            print(
+                f"\t\tThe following table is{string_method} returned, you will obtain the table by pasting it on spreadsheet.\n\n")
             print(table_total)
         return table_total

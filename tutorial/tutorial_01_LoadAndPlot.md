@@ -1,5 +1,11 @@
 
-# yt_pyXspecを利用した効率化
+# yt_pyXspecを利用した効率化 Step01 - Load and Plot -
+
+純粋なpyXspec自体のTutorialは以下も参考になる。
+- GitHubにある公式ipynb: https://github.com/HEASARC/PyXspec-Jupyter-notebooks/blob/main/PyXspecWalkthrough1Matplotlib.ipynb
+- GitHubにある公式ipynb: https://github.com/mfacorcoran/pyxspec-tutorial/blob/master/PyXspec-TheExtendedTutorial.ipynb
+- 公式ReferenceにあるQuick Tutorial: https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/quick.html
+- 公式ReferenceにあるExtended Tutorial: https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/extended.html
 
 ## xcmファイルの読み込み (共通項目)
 
@@ -53,6 +59,11 @@ ytpx.loadXcm(xcm_path=xcm_path)
 # > .......
 # >  Current data and model not fit yet.
 ```
+
+## ytpxとxspec
+
+`xspec`をimportすると付随する **`Plot`, `AllModels`, `Xset`などは`ytpx`のattributeとして(`ytpx.Plot`のように)アクセスできる** 。
+なお、`xspec`自体も`ytpx.xspec`としてアクセスできるので、純粋なpyXspecとしての操作にも完全に対応している。
 
 ## グラフをplotする
 
@@ -223,3 +234,6 @@ Figure is saved as /home/YYYYYYYYYYYYY/ld_epoch2.png
 <img src="./imgs/ld_epoch1.png" style="width: 40%">
 
 <img src="./imgs/ld_epoch2.png" style="width: 40%">
+
+なお、`***XSPEC Error: Requested array does not exist for this plot.`は`obtain_datass()`の過程で表示されてしまうエラーなので、無視してほしい。
+これは`try, except`や`warnings.simplefilter("ignore")`でも消せなかった。

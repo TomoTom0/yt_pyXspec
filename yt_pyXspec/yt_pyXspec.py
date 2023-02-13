@@ -353,7 +353,7 @@ class Ytpx():
                 ax = plt.subplot(gs_tmp)
                 subplots.append(ax)
             else:
-                ax = plt.subplot(gs_tmp, sharey=subplots[0])
+                ax = plt.subplot(gs_tmp, sharex=subplots[0])
                 subplots.append(ax)
                 
 
@@ -362,7 +362,6 @@ class Ytpx():
             for key_xy in ["x", "y"]:
                 if info.get("log", {}).get(key_xy, False) is True:
                     logFunc_dict[key_xy]("log")
-            
             
             if self._categorizePlotType(plot_type, "log"):
                 ax.set_yscale("log")

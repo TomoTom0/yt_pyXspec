@@ -1,5 +1,5 @@
 
-# yt_pyXspecを利用した効率化 Step01 - Load and Plot -
+# yt_pyXspecを利用した効率化 Step1 - Load and Plot -
 
 純粋なpyXspec自体のTutorialは以下も参考になる。
 - GitHubにある公式ipynb: https://github.com/HEASARC/PyXspec-Jupyter-notebooks/blob/main/PyXspecWalkthrough1Matplotlib.ipynb

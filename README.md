@@ -9,6 +9,11 @@ support pyXspec on jupyter with matplotlib
 1. clone this repository to local: `git clone https://github.com/TomoTom0/yt_pyXspec.git`
 2. move to the cloned directory, local install with `pip` in the established mode at the same hierarchy as `setup.py`: `pip install -e .`
 
+## Tutorials
+
+- [Tutorial 01: Load & Plot](./tutorial/tutorial_01_LoadAndPlot.md)
+- [Tutorial 02: Show & Obtain](./tutorial/tutorial_02_ShowAndObtain.md)
+
 ## Usage
 
 For example,

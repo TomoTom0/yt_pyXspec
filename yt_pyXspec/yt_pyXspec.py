@@ -74,8 +74,10 @@ class Ytpx():
         plt = self.plt
         plt.rcParams["figure.figsize"] = (3.14*2, 3.14*2*0.7)
         plt.rcParams["figure.dpi"] = 100  # 画像保存するときは300に
+        plt.rcParams["savefig.dpi"] = 300  # 画像保存するときは300に
 
         plt.rcParams["font.family"] = "Times New Roman"  # 全体のフォントを設定
+        plt.rcParams["mathtext.fontset"] = "stix"  # 数式のフォントを設定
         plt.rcParams["xtick.direction"] = "in"  # x軸の目盛線を内向きへ
         plt.rcParams["ytick.direction"] = "in"  # y軸の目盛線を内向きへ
         plt.rcParams["xtick.minor.visible"] = True  # x軸補助目盛りの追加
@@ -334,10 +336,10 @@ class Ytpx():
         subplots = []
 
         # set height ratios for sublots
-        gs = gridspec.GridSpec(len(plots), 1, height_ratios=[
+        gss = gridspec.GridSpec(len(plots), 1, height_ratios=[
             2 if self._categorizePlotType(s, "big") else 1 for s in plots])
 
-        for gs_tmp, plot_type in zip(gs, plots):
+        for gs_tmp, plot_type in zip(gss, plots):
             dataInfos = datass_valid.get(plot_type, None)
             datas = dataInfos.get("data") if isinstance(
                 dataInfos, dict) else None
@@ -347,15 +349,19 @@ class Ytpx():
                 continue
 
             # the fisrt subplot
-            ax = plt.subplot(gs_tmp)
-            subplots.append(ax)
+            if gs_tmp == gss[0]:
+                ax = plt.subplot(gs_tmp)
+                subplots.append(ax)
+            else:
+                ax = plt.subplot(gs_tmp, sharex=subplots[0])
+                subplots.append(ax)
+                
 
             # set scale
             logFunc_dict = {"x": ax.set_xscale, "y": ax.set_yscale}
             for key_xy in ["x", "y"]:
                 if info.get("log", {}).get(key_xy, False) is True:
                     logFunc_dict[key_xy]("log")
-            
             
             if self._categorizePlotType(plot_type, "log"):
                 ax.set_yscale("log")
@@ -386,7 +392,7 @@ class Ytpx():
             # set label
             labels = info.get("labels", "")
             plt.subplots_adjust(hspace=.0)
-            if not gs_tmp == gs[-1]:
+            if not gs_tmp == gss[-1]:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_xminorticklabels(), visible=False)
             else:
@@ -506,12 +512,46 @@ class Ytpx():
         comps = [model.__dict__[s] for s in model.componentNames]
         return sum([[{"param": comp.__dict__[s], "comp":comp} for s in comp.parameterNames] for comp in comps], [])
 
-    def _obtainELF(self, error, frozen, link):
-        error_str = "_".join(map(str, error))
-        elf = "frozen" if frozen else (link if link != "" else error_str)
+    def _obtainELF_list(self, error, frozen, link, order_value=5):
+        error_str = [format(s, f".{order_value}g") for s in error]
+        elf = ["frozen", "null"] if frozen else ([link, "null"] if link != "" else error_str)
         return elf
+    
+    # ------------- from texttable : begin------------
+    def _to_float(self, x):
+        if x is None:
+            return None
+        try:
+            return float(x)
+        except (TypeError, ValueError):
+            return None
+    
+    def _judge_format(self, x):
+        f = self._to_float(x)
+        judged_dict={
+            "exp":abs(f) > 1e8,
+            "text": f != f, #NaN
+            "int": f - round(f) == 0,
+            "float":True
+        }
+        return [k for k,v in judged_dict.items() if v is True][0]
+    
+    def _format_auto(self, x, order_value=5):
+        format_judged=self._judge_format(x)
+        if format_judged == "exp":
+            return format(x, f".{order_value}e")
+        elif format_judged == "text":
+            return str(x)
+        elif format_judged == "int":
+            return str(int(x))
+        else: # float
+            return format(x, f".{order_value}f")
+        
+    # ------------- from texttable : end ------------
+        
+        
 
-    def obtainInfoParam(self, param, info_comp={}, info_model={}, flag_forPrint=False):
+    def obtainInfoParam(self, param, info_comp={}, info_model={}, flag_forPrint=False, order_value=5):
         ind_param_start = info_model.get("startParIndex", None)
         _ind_dict = {
             "ind_param": param.index,
@@ -530,19 +570,19 @@ class Ytpx():
                 "name_comp": info_comp.get("name", "None"),
                 "name_param": param.name,
                 "unit": param.unit,
-                "value": param.values[0]
+                "value": format(param.values[0], f".{order_value}g") if flag_forPrint is True else param.values[0]
             },
             "forNotPrint": {} if flag_forPrint is True else {
                 "error": param.error[:2],
                 "frozen": param.frozen,
                 "link": param.link},
             "elf": {
-                "elf": self._obtainELF(error=param.error[:2], frozen=param.frozen, link=param.link)
+                f"elf_{ind_v}": v for ind_v ,v in enumerate(self._obtainELF_list(error=param.error[:2], frozen=param.frozen, link=param.link, order_value=order_value))
             }
         }
         return {**_info_param_dict["ind"], **_info_param_dict["main"], **_info_param_dict["forNotPrint"], **_info_param_dict["elf"]}
 
-    def obtainInfoParamsAll(self, flag_forPrint=False, flag_oneOnly=False):
+    def obtainInfoParamsAll(self, flag_forPrint=False, flag_oneOnly=False, order_value=5):
         AllModels = self.AllModels
         AllData = self.AllData
 
@@ -560,28 +600,32 @@ class Ytpx():
                     "startParIndex": model.startParIndex,
                     "ind": ind_model+1
                 },
-                flag_forPrint=flag_forPrint
+                flag_forPrint=flag_forPrint,
+                order_value=order_value
             ) for paramAndComp in self.obtainParamsPerComp(model)] for ind_model, model in enumerate(models)]
         info_paramss = [_info_paramss[0]
                         ] if flag_oneOnly is True else _info_paramss
         return info_paramss
 
-    def showParamsAll(self, flag_oneOnly=False, max_width=100):
+    def showParamsAll(self, flag_oneOnly=False, max_width=100, order_value=5):
         Fit = self.Fit
-        chisq = Fit.statistic/Fit.dof
+        stat = Fit.statistic
+        dof = Fit.dof
+        chisq = stat / dof
 
         info_paramss = self.obtainInfoParamsAll(
-            flag_forPrint=True, flag_oneOnly=flag_oneOnly)
+            flag_forPrint=True, flag_oneOnly=flag_oneOnly, order_value=order_value)
 
         # table
         table = texttable.Texttable(max_width=max_width)
         table.set_deco(texttable.Texttable.HEADER)
-        table.set_cols_align(["r", "r", "r", "r", "l", "l", "l", "l", "l"])
+        table.set_cols_align(["r", "r", "r", "r", "l", "l", "l", "l", "l", "l"])
+        table.set_cols_dtype(["i", "i", "i", "i", "t", "t", "t", "t", "t", "t"])
         header = list(info_paramss[0][0].keys())
         table.add_rows([header]+sum(sum([[[
             [""]*(len(header))], [list(s.values()) for s in info_params]]
             for ind_model, info_params in enumerate(info_paramss)], []), []))
-        print(table.draw()+f"\n\t\tReduced Chi-Squared: {chisq}")
+        print(table.draw()+"\n\t\tReduced Chi-Squared: {:.5g} / {} = {:.5g}".format(stat, dof, chisq))
 
     def showParamsAll_xspec(self, flag_oneOnly=False):
         AllModels = self.AllModels
@@ -610,7 +654,7 @@ class Ytpx():
 
         return output
 
-    def obtainInfoParamForExport(self, header_selected=[], flag_showHeader=True, flag_oneOnly=False, flag_print=True, flag_copy=True):
+    def obtainInfoParamsForExport(self, header_selected=[], flag_showHeader=True, flag_oneOnly=False, flag_print=True, flag_copy=True):
         Fit = self.Fit
         info_stat = {
             "stat": Fit.statistic,

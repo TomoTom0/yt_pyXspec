@@ -42,7 +42,7 @@ xcm_paths=["AAAA.xcm", "BBBB.xcm"]
 # plot graph from xcm paths and export as image file
 # plots allow "eeu", "eem", "ld", "del", "ratio"
 
-fig_axs_dic=ytpx.plot_datas_fromXcms(
+fig_axs_dic=ytpx.plot_datass_fromXcms(
     xcms=xcm_paths,
     title_func=title_func,
     exportImagePath_func=exportImagePath_func,
@@ -54,7 +54,7 @@ fig_axs_dic=ytpx.plot_datas_fromXcms(
 #### plots
 - iterable; `["eeu", "ld"]`
 - plot graphs of the inputed type
-- allowed values are `"eeu", "eem", "ld", "del", "ratio"`
+- recommended values are `"eeu", "eem", "ld", "del", "ratio"`
 
 #### x_lim
 - iterable; `[range_min, range_max]`
@@ -76,10 +76,10 @@ fig_axs_dic=ytpx.plot_datas_fromXcms(
 - a marker set of plot
 - check the reference of matplotlib.pyplot.scatter to know valid values
 
-#### datas_s
-- dict `{"eeu": datas}`
+#### datass
+- dict `{"eeu": datass}`
 - if not inputted, datas_s are obtained from the present pyXspec environments
-- if you use `plot_datas_fromXcms`, you should not input `datas_s`
+- if you use `plot_datass_fromXcms`, you should not input `datas_s`
 
 #### exportImagePath
 - str `"/home/XXXXXXXXXXX/AAA.pdf"`
@@ -106,6 +106,23 @@ fig_axs_dic=ytpx.plot_datas_fromXcms(
 - elinewith_data: 1
 - marker_size_mdoel: 0
 - elinewidth_model: 0.5
+
+
+## matplotlib font
+
+In order to use fonts in matplotlib, you must do the following operation once.
+
+```bash
+# bash
+sudo apt install msttcorefonts -qq
+rm ~/.cache/matplotlib -rf
+```
+
+```python
+# python
+import matplotlib
+matplotlib.font_manager._rebuild()
+```
 
 ## Contact
 

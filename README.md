@@ -9,6 +9,22 @@ support pyXspec on jupyter with matplotlib
 1. clone this repository to local: `git clone https://github.com/TomoTom0/yt_pyXspec.git`
 2. move to the cloned directory, local install with `pip` in the established mode at the same hierarchy as `setup.py`: `pip install -e .`
 
+### matplotlib font
+
+In order to use fonts in matplotlib, you must do the following operation once.
+
+```bash
+# bash
+sudo apt install msttcorefonts -qq
+rm ~/.cache/matplotlib -rf
+```
+
+```python
+# python
+import matplotlib
+matplotlib.font_manager._rebuild()
+```
+
 ## Tutorials
 
 - [Tutorial 01: Load & Plot](./tutorial/tutorial_01_LoadAndPlot.md)
@@ -84,7 +100,7 @@ fig_axs_dic=ytpx.plot_datass_fromXcms(
 #### datass
 - dict `{"eeu": datass}`
 - if not inputted, datas_s are obtained from the present pyXspec environments
-- if you use `plot_datass_fromXcms`, you should not input `datas_s`
+- if you use `plot_datass_fromXcms`, you should not input `datass`
 
 #### exportImagePath
 - str `"/home/XXXXXXXXXXX/AAA.pdf"`
@@ -113,21 +129,6 @@ fig_axs_dic=ytpx.plot_datass_fromXcms(
 - elinewidth_model: 0.5
 
 
-## matplotlib font
-
-In order to use fonts in matplotlib, you must do the following operation once.
-
-```bash
-# bash
-sudo apt install msttcorefonts -qq
-rm ~/.cache/matplotlib -rf
-```
-
-```python
-# python
-import matplotlib
-matplotlib.font_manager._rebuild()
-```
 
 ## Contact
 

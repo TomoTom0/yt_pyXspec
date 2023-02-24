@@ -88,7 +88,7 @@ i_p   i_pT   i_c   i_m   name_comp   name_param   unit      value       elf_0   
 
 ### ytpx.obtainInfoParamsForExport()
 
-- `ytpx.showParamsAll()`で表示している内容がtsv形式(列方向がタブ`\t`連結、行方向が改行`\n`連結)で与えられる。
+- `ytpx.showParamsAll()`で表示している内容がtsv形式(行方向がタブ`\t`連結、列方向が改行`\n`連結)で与えられる。
     - xcmファイルのpath、reduced chisqも追加行に出力される。
 - オプションに応じてprint (`flag_print`)、クリップボードへのコピー(`flag_copy`)の有効無効を切り替えられる。
 - 出力をそのままスプレッドシートなどに貼り付けることで、表が得られる。

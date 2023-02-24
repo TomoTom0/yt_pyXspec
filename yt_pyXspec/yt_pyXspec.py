@@ -31,8 +31,8 @@ class Ytpx():
         self.__stdout__ = sys.stdout
         self.default_exportImagePath = None
         self.xcm = None
-        self.__initMatplotlibRcParams()
-        self.__initXspecPlot()
+        self.initMatplotlibRcParams()
+        self.initXspecPlot()
         # self.gridspec=_gridspec
 
     def chDir(self, dir_path=None):
@@ -57,7 +57,7 @@ class Ytpx():
     def enablePrint(self):
         sys.stdout = self.__stdout__
 
-    def __initXspecPlot(self):
+    def initXspecPlot(self):
         Plot = self.Plot
         Plot.xAxis = "keV"
         Plot.addCommand("time off")
@@ -70,11 +70,14 @@ class Ytpx():
         Plot.addCommand("win 2")
         Plot.addCommand("loc 0.05 0.05 1 0.95")
 
-    def __initMatplotlibRcParams(self):
+    def initMatplotlibRcParams(self, flag_forSldie=False):
         plt = self.plt
         plt.rcParams["figure.figsize"] = (3.14*2, 3.14*2*0.7)
         plt.rcParams["figure.dpi"] = 100  # 画像保存するときは300に
         plt.rcParams["savefig.dpi"] = 300  # 画像保存するときは300に
+
+        factor = 1.8 if flag_forSldie is True else 1
+        factor_size = 1.2 if flag_forSldie is True else 1
 
         plt.rcParams["font.family"] = "Times New Roman"  # 全体のフォントを設定
         plt.rcParams["mathtext.fontset"] = "stix"  # 数式のフォントを設定
@@ -82,16 +85,19 @@ class Ytpx():
         plt.rcParams["ytick.direction"] = "in"  # y軸の目盛線を内向きへ
         plt.rcParams["xtick.minor.visible"] = True  # x軸補助目盛りの追加
         plt.rcParams["ytick.minor.visible"] = True  # y軸補助目盛りの追加
-        plt.rcParams["xtick.major.width"] = 1.5  # x軸主目盛り線の線幅
-        plt.rcParams["ytick.major.width"] = 1.5  # y軸主目盛り線の線幅
-        plt.rcParams["xtick.minor.width"] = 1.0  # x軸補助目盛り線の線幅
-        plt.rcParams["ytick.minor.width"] = 1.0  # y軸補助目盛り線の線幅
-        plt.rcParams["xtick.major.size"] = 10  # x軸主目盛り線の長さ
-        plt.rcParams["ytick.major.size"] = 10  # y軸主目盛り線の長さ
-        plt.rcParams["xtick.minor.size"] = 5  # x軸補助目盛り線の長さ
-        plt.rcParams["ytick.minor.size"] = 5  # y軸補助目盛り線の長さ
-        plt.rcParams["font.size"] = 14  # フォントの大きさ
-        plt.rcParams["axes.linewidth"] = 1.5  # 囲みの太さ
+        plt.rcParams["xtick.major.width"] = 1.5*factor  # x軸主目盛り線の線幅
+        plt.rcParams["ytick.major.width"] = 1.5*factor  # y軸主目盛り線の線幅
+        plt.rcParams["xtick.minor.width"] = 1.0*factor  # x軸補助目盛り線の線幅
+        plt.rcParams["ytick.minor.width"] = 1.0*factor  # y軸補助目盛り線の線幅
+        plt.rcParams["xtick.major.size"] = 10*factor_size  # x軸主目盛り線の長さ
+        plt.rcParams["ytick.major.size"] = 10*factor_size  # y軸主目盛り線の長さ
+        plt.rcParams["xtick.minor.size"] = 5*factor_size  # x軸補助目盛り線の長さ
+        plt.rcParams["ytick.minor.size"] = 5*factor_size  # y軸補助目盛り線の長さ
+        plt.rcParams["font.size"] = 14*factor  # フォントの大きさ
+        plt.rcParams["axes.linewidth"] = 1.5*factor  # 囲みの太さ
+        plt.rcParams["axes.labelsize"] = "large" if flag_forSldie is True else "medium"
+        plt.rcParams["xtick.labelsize"] = "medium" if flag_forSldie is True else "medium"
+        plt.rcParams["ytick.labelsize"] = "medium" if flag_forSldie is True else "medium"
 
     def loadXcm(self, xcm_path, verbose=0):
         if not os.path.isfile(xcm_path):
@@ -131,8 +137,13 @@ class Ytpx():
         Plot(plot_command)
         datass = {}
 
-        for plotWindow_tmp, plot_type in enumerate(plots):
-            plotWindow = plotWindow_tmp+1
+        for tmp_plotWindow, tmp_plotType in enumerate(plots):
+            plotType_orig = self.obtainOriginalPlotType(
+                tmp_plotType, flag_strict=True)
+            if plotType_orig is None:
+                raise Exception(f"{tmp_plotType} may be invalid plotType")
+            plotType = plotType_orig
+            plotWindow = tmp_plotWindow+1
             datas = {}
             datas_info = {
                 "labels": {
@@ -140,7 +151,7 @@ class Ytpx():
                                    r"$\\mathdefault{\1}$", label)
                     for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
                 },
-                "title":Plot.labels(plotWindow)[2],
+                "title": Plot.labels(plotWindow)[2],
                 "log": {
                     key_xy: _log for key_xy, _log in zip(["x", "y"], [Plot.xLog, Plot.yLog])
                 },
@@ -164,7 +175,7 @@ class Ytpx():
                         with warnings.catch_warnings():
                             warnings.filterwarnings("ignore")
                             data_obtained = dataFunc(plotGroup, plotWindow)
-                        #warnings.resetwarnings()
+                        # warnings.resetwarnings()
                         datas_data[key_data] = data_obtained
                     except Exception as e:
                         pass
@@ -191,13 +202,13 @@ class Ytpx():
                             compNames.append(compAdd.name)
                         except Exception as e:
                             break
-                    #warnings.resetwarnings()
+                    # warnings.resetwarnings()
                     if len(compNames) > 0:
                         datas_comp = {"ys_comps": comps_obtained,
                                       "compNames": compNames}
                 datas[plotGroup] = {**datas_groupInfo,
                                     **datas_data, **datas_comp}
-            datass[plot_type] = {
+            datass[plotType] = {
                 "info": datas_info,
                 "data": datas
             }
@@ -275,25 +286,75 @@ class Ytpx():
             return ((np.array([v_min, v_max]))+np.array([-1, +1])*margin).tolist()
 
     def _categorizePlotType(self, plotType, categoryType="log"):
-                categorize_dict={
-                    "log":["lcounts", "ldata", 
-                           "ufspec", "eufspec", "eeufspec",
-                           "model", "emodel", "eemodel"],
-                    "big":["lcounts", "ldata", 
-                           "ufspec", "eufspec", "eeufspec",
-                           "model", "emodel", "eemodel",
-                           "counts", "data",
-                           "background", "chain", "contour",
-                           "dem", "eqw"]
-                }
-                return any(
-                    key.startswith(plotType) 
-                    for key in categorize_dict.get(categoryType, []))
-            
+        categorize_dict = {
+            "log": ["lcounts", "ldata",
+                    "ufspec", "eufspec", "eeufspec",
+                    "model", "emodel", "eemodel"],
+            "big": ["lcounts", "ldata",
+                    "ufspec", "eufspec", "eeufspec",
+                    "model", "emodel", "eemodel",
+                    "counts", "data",
+                    "background", "chain", "contour",
+                    "dem", "eqw"]
+        }
+        return any(
+            key.startswith(plotType)
+            for key in categorize_dict.get(categoryType, []))
+
+    def obtainOriginalPlotType(self, plotType, flag_strict=True):
+        original_plotTypes = [
+            "goodness",
+            "lcounts",
+            "eemodel",
+            "delchi",
+            "margin",
+            "chain",
+            "polangle",
+            "icounts",
+            "eeufspec",
+            "ratio",
+            "chisq",
+            "eqw",
+            "dem",
+            "counts",
+            "fitstat",
+            "efficien",
+            "polfrac",
+            "residuals",
+            "ufspec",
+            "data",
+            "insensitv",
+            "eufspec",
+            "contour",
+            "integprob",
+            "emodel",
+            "model",
+            "ldata",
+            "sensitvity",
+            "background",
+            "sum"
+        ]
+        tmp_plotType_origs = [
+            s for s in original_plotTypes if s.startswith(plotType)]
+        if flag_strict is not True:
+            return tmp_plotType_origs[0]
+        elif len(tmp_plotType_origs) == 1:
+            return tmp_plotType_origs[0]
+        else:
+            return None
+    
+    def _dictGet(self, dic, keys, default_value=None):
+        if not isinstance(dic, dict):
+            return default_value
+        return ([dic[key] for key in keys if key in dic.keys()]+[default_value])[0]
+    
+    def _judgeReal(self, value):
+        return isinstance(value, int) or isinstance(value, float)
 
     # # plot datass
+
     def plot_datass(self,
-                    plots=["eeu"],
+                    plots=["eeufspec"],
                     x_lim=[],
                     y_lims={},
                     colors=["royalblue", "red", "olivedrab", "turquoise", "orange",
@@ -314,7 +375,11 @@ class Ytpx():
             "elinewith_data": 1,
             "marker_size_mdoel": 0,
             "elinewidth_model": 0.5,
-            "title": None
+            "title": None,
+            "xlabel": None,
+            "ylabel_dic": None,
+            "ylabel_fontsize_dic": None,
+            "facecolor":"white"
         }
         kwargs = {**kwargs_default, **kwargs_in}
 
@@ -324,13 +389,14 @@ class Ytpx():
         checkWritableFilePath = self.__checkWritableFilePath
         valid_exportImagePath = ([s for s in [
                                  exportImagePath, default_exportImagePath] if checkWritableFilePath(s)]+[None])[0]
+        facecolor=kwargs.get("facecolor")
 
         # plots_diff = set(plots)-{"eeu", "eem", "ratio", "del", "ld"}
         # if len(plots_diff) >= 1:
         #    print(", ".join(list(plots_diff))+" are not appropriate")
 
         fig = plt.figure()
-        fig.patch.set_facecolor("white")
+        fig.patch.set_facecolor(facecolor)
         datass_valid = datass or obtain_datass(plots=plots)
 
         subplots = []
@@ -339,8 +405,12 @@ class Ytpx():
         gss = gridspec.GridSpec(len(plots), 1, height_ratios=[
             2 if self._categorizePlotType(s, "big") else 1 for s in plots])
 
-        for gs_tmp, plot_type in zip(gss, plots):
-            dataInfos = datass_valid.get(plot_type, None)
+        for gs_tmp, plotType_input in zip(gss, plots):
+            plotType_orig = self.obtainOriginalPlotType(
+                plotType_input, flag_strict=True)
+            plotType=plotType_orig
+
+            dataInfos = self._dictGet(datass_valid, [plotType_orig, plotType_input])
             datas = dataInfos.get("data") if isinstance(
                 dataInfos, dict) else None
             info = dataInfos.get("info", {}) if isinstance(
@@ -355,20 +425,21 @@ class Ytpx():
             else:
                 ax = plt.subplot(gs_tmp, sharex=subplots[0])
                 subplots.append(ax)
-                
+            
+            ax.patch.set_facecolor(facecolor)
 
             # set scale
             logFunc_dict = {"x": ax.set_xscale, "y": ax.set_yscale}
             for key_xy in ["x", "y"]:
                 if info.get("log", {}).get(key_xy, False) is True:
                     logFunc_dict[key_xy]("log")
-            
-            if self._categorizePlotType(plot_type, "log"):
+
+            if self._categorizePlotType(plotType, "log"):
                 ax.set_yscale("log")
-                #pass
-            elif plot_type in ["ratio"]:
+                # pass
+            elif plotType_orig in ["ratio"]:
                 plt.axhline(1, ls=":", lw=1., color="black", alpha=1, zorder=0)
-            elif plot_type in ["del"]:
+            elif plotType_orig in ["delchi"]:
                 plt.axhline(0, ls=":", lw=1., color="black", alpha=1, zorder=0)
 
             # set lim
@@ -383,7 +454,7 @@ class Ytpx():
             ax.set_xlim(lims_fromValue["xs"])
             ax.set_ylim(lims_fromValue["ys"])
 
-            y_lim = y_lims.get(plot_type, None)
+            y_lim = self._dictGet(y_lims, [plotType_input, plotType_orig])
             if hasattr(x_lim, "__iter__") and not len(x_lim) < 2:
                 ax.set_xlim(x_lim)
             if hasattr(y_lim, "__iter__") and not len(y_lim) < 2:
@@ -396,14 +467,20 @@ class Ytpx():
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_xminorticklabels(), visible=False)
             else:
-                ax.set_xlabel(labels.get("x", "Energy (keV)"))
-            ylabel_dic = {}
-            # ylabel_dic = {"eeu": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
-            #            "eem": "$EF_\mathdefault{E}$ (keV$^2$)",
-            #            "ld": "normalized counts s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$",
-            #            "ratio": "ratio", "del": "residual"}
-            ax.set_ylabel(ylabel_dic.get(
-                plot_type, labels.get("y", "")), fontsize=10)
+                xlabel=kwargs.get("xlabel") if isinstance(kwargs.get("xlabel"), str) else labels.get("x", "Energy (keV)")
+                ax.set_xlabel(xlabel)
+            # ylabel_dic = {}
+            ylabel_dic_default = {"eeufspec": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
+                                  "eemmodel": "$EF_\mathdefault{E}$ (keV$^2$)",
+                                  "ldata": "normalized counts s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$",
+                                  "ratio": "ratio", "delchi": "residual"}
+            ylabel_dic_fromKwargs = kwargs.get("ylabel_dic") if isinstance(
+                kwargs.get("ylabel_dic"), dict) else {}
+            ylabel_dic = {**ylabel_dic_default, **ylabel_dic_fromKwargs}
+            ylabel=self._dictGet(ylabel_dic, [plotType_input, plotType_orig], labels.get("y", ""))
+            ylabel_fontsize_fromKwargs=self._dictGet(kwargs.get("ylabel_fontsize_dic"), [plotType_input, plotType_orig])
+            ylabel_fontsize= ylabel_fontsize_fromKwargs if self._judgeReal(ylabel_fontsize_fromKwargs) else 10
+            ax.set_ylabel(ylabel, fontsize=ylabel_fontsize)
 
             fig.align_labels()
 
@@ -414,20 +491,20 @@ class Ytpx():
                 xs = data_tmp["xs"]
                 marker = (markers+["o"]*(plotGroup+1))[plotGroup-1]
                 color = (colors+["black"]*(plotGroup+1))[plotGroup-1]
-                # plot_type in {"eeu", "eem", "ratio", "del", "ld"} and
+                # plotType in {"eeu", "eem", "ratio", "del", "ld"} and
                 if kwargs.get("flag_dataPlot") is True and "ys" in data_tmp.keys():
                     ys = data_tmp["ys"]
                     xe = data_tmp.get("xe", [0]*len(xs))
                     ye = data_tmp.get("ye", [0]*len(ys))
-                    marker_size = kwargs.get("marker_size_data", 0)
-                    elinewith = kwargs.get("elinewidth_data", 1)
+                    marker_size = kwargs.get("marker_size_data") # 0
+                    elinewith = kwargs.get("elinewidth_data") # 1
                     scatter_tmp = plt.scatter(
                         xs, ys, marker=marker, color=color, s=marker_size)
                     scatters.append(scatter_tmp)
                     plt.errorbar(xs, ys, yerr=ye, xerr=xe, capsize=0, fmt=marker, markersize=0,
                                  ecolor=color, markeredgecolor="none", color="none", elinewidth=elinewith)
 
-                # plot_type in {"eeu", "eem", "ld"} and
+                # plotType in {"eeu", "eem", "ld"} and
                 if kwargs.get("flag_modelPlot") is True and "ys_model" in data_tmp.keys():
                     ys_model = data_tmp.get("ys_model", [])
                     # plt.plot(xs, ys_model, color=color)
@@ -441,8 +518,8 @@ class Ytpx():
                         x-xe_tmp for x, xe_tmp in zip(xs_tmp, xe_tmp)]+[xs_tmp[-1]+xe_tmp[-1]]
                     ys_step = [ys_tmp[0]]+ys_tmp
 
-                    marker_size = kwargs.get("marker_size_model", 0)
-                    elinewith = kwargs.get("elinewidth_model", 0.5)
+                    marker_size = kwargs.get("marker_size_model") # 0
+                    elinewith = kwargs.get("elinewidth_model") # 0.5
 
                     if kwargs.get("flag_modelStep") is True:
                         plt.step(xs_step, ys_step, color=color, linewidth=0.5,
@@ -459,13 +536,13 @@ class Ytpx():
                         plt.plot(xs, ys_comp, linestyle="dotted",
                                  color=color)
                 # plt.plot()
-            legend = legends_dic.get(plot_type, [])+[""]*(plotGroup+1)
+            legend = self._dictGet(legends_dic, [plotType_input, plotType_orig], [])+[""]*(plotGroup+1)
             scatters_now = [scatters[ind] for ind, legend_name in enumerate(
                 legend) if len(legend_name) > 0]
             legend_now = [
                 legend_name for legend_name in legend if len(legend_name) > 0]
             if len(legend_now) > 0:
-                legends_sort_tmp = legends_sort+[plotGroup+1]*(plotGroup+1)
+                #legends_sort_tmp = legends_sort+[plotGroup+1]*(plotGroup+1)
                 scatters_tmp = sorted(
                     scatters_now, key=lambda x: legends_sort[scatters_now.index(x)])
                 legend_tmp = sorted(
@@ -514,9 +591,10 @@ class Ytpx():
 
     def _obtainELF_list(self, error, frozen, link, order_value=5):
         error_str = [format(s, f".{order_value}g") for s in error]
-        elf = ["frozen", "null"] if frozen else ([link, "null"] if link != "" else error_str)
+        elf = ["frozen", "null"] if frozen else (
+            [link, "null"] if link != "" else error_str)
         return elf
-    
+
     # ------------- from texttable : begin------------
     def _to_float(self, x):
         if x is None:
@@ -525,31 +603,29 @@ class Ytpx():
             return float(x)
         except (TypeError, ValueError):
             return None
-    
+
     def _judge_format(self, x):
         f = self._to_float(x)
-        judged_dict={
-            "exp":abs(f) > 1e8,
-            "text": f != f, #NaN
+        judged_dict = {
+            "exp": abs(f) > 1e8,
+            "text": f != f,  # NaN
             "int": f - round(f) == 0,
-            "float":True
+            "float": True
         }
-        return [k for k,v in judged_dict.items() if v is True][0]
-    
+        return [k for k, v in judged_dict.items() if v is True][0]
+
     def _format_auto(self, x, order_value=5):
-        format_judged=self._judge_format(x)
+        format_judged = self._judge_format(x)
         if format_judged == "exp":
             return format(x, f".{order_value}e")
         elif format_judged == "text":
             return str(x)
         elif format_judged == "int":
             return str(int(x))
-        else: # float
+        else:  # float
             return format(x, f".{order_value}f")
-        
+
     # ------------- from texttable : end ------------
-        
-        
 
     def obtainInfoParam(self, param, info_comp={}, info_model={}, flag_forPrint=False, order_value=5):
         ind_param_start = info_model.get("startParIndex", None)
@@ -577,7 +653,7 @@ class Ytpx():
                 "frozen": param.frozen,
                 "link": param.link},
             "elf": {
-                f"elf_{ind_v}": v for ind_v ,v in enumerate(self._obtainELF_list(error=param.error[:2], frozen=param.frozen, link=param.link, order_value=order_value))
+                f"elf_{ind_v}": v for ind_v, v in enumerate(self._obtainELF_list(error=param.error[:2], frozen=param.frozen, link=param.link, order_value=order_value))
             }
         }
         return {**_info_param_dict["ind"], **_info_param_dict["main"], **_info_param_dict["forNotPrint"], **_info_param_dict["elf"]}
@@ -619,13 +695,16 @@ class Ytpx():
         # table
         table = texttable.Texttable(max_width=max_width)
         table.set_deco(texttable.Texttable.HEADER)
-        table.set_cols_align(["r", "r", "r", "r", "l", "l", "l", "l", "l", "l"])
-        table.set_cols_dtype(["i", "i", "i", "i", "t", "t", "t", "t", "t", "t"])
+        table.set_cols_align(
+            ["r", "r", "r", "r", "l", "l", "l", "l", "l", "l"])
+        table.set_cols_dtype(
+            ["i", "i", "i", "i", "t", "t", "t", "t", "t", "t"])
         header = list(info_paramss[0][0].keys())
         table.add_rows([header]+sum(sum([[[
             [""]*(len(header))], [list(s.values()) for s in info_params]]
             for ind_model, info_params in enumerate(info_paramss)], []), []))
-        print(table.draw()+"\n\t\tReduced Chi-Squared: {:.5g} / {} = {:.5g}".format(stat, dof, chisq))
+        print(table.draw(
+        )+"\n\t\tReduced Chi-Squared: {:.5g} / {} = {:.5g}".format(stat, dof, chisq))
 
     def showParamsAll_xspec(self, flag_oneOnly=False):
         AllModels = self.AllModels

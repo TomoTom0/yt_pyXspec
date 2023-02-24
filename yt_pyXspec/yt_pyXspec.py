@@ -342,6 +342,14 @@ class Ytpx():
             return tmp_plotType_origs[0]
         else:
             return None
+    
+    def _dictGet(self, dic, keys, default_value=None):
+        if not isinstance(dic, dict):
+            return default_value
+        return ([dic[key] for key in keys if key in dic.keys()]+[default_value])[0]
+    
+    def _judgeReal(self, value):
+        return isinstance(value, int) or isinstance(value, float)
 
     # # plot datass
 
@@ -370,6 +378,7 @@ class Ytpx():
             "title": None,
             "xlabel": None,
             "ylabel_dic": None,
+            "ylabel_fontsize_dic": None,
             "facecolor":"white"
         }
         kwargs = {**kwargs_default, **kwargs_in}
@@ -401,7 +410,7 @@ class Ytpx():
                 plotType_input, flag_strict=True)
             plotType=plotType_orig
 
-            dataInfos = datass_valid.get(plotType_orig, datass_valid.get(plotType_input, None))
+            dataInfos = self._dictGet(datass_valid, [plotType_orig, plotType_input])
             datas = dataInfos.get("data") if isinstance(
                 dataInfos, dict) else None
             info = dataInfos.get("info", {}) if isinstance(
@@ -445,7 +454,7 @@ class Ytpx():
             ax.set_xlim(lims_fromValue["xs"])
             ax.set_ylim(lims_fromValue["ys"])
 
-            y_lim = y_lims.get(plotType_orig, y_lims.get(plotType_input, None))
+            y_lim = self._dictGet(y_lims, [plotType_input, plotType_orig])
             if hasattr(x_lim, "__iter__") and not len(x_lim) < 2:
                 ax.set_xlim(x_lim)
             if hasattr(y_lim, "__iter__") and not len(y_lim) < 2:
@@ -458,8 +467,8 @@ class Ytpx():
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_xminorticklabels(), visible=False)
             else:
-                ax.set_xlabel(kwargs.get(
-                    "xlabel", labels.get("x", "Energy (keV)")))
+                xlabel=kwargs.get("xlabel") if isinstance(kwargs.get("xlabel"), str) else labels.get("x", "Energy (keV)")
+                ax.set_xlabel(xlabel)
             # ylabel_dic = {}
             ylabel_dic_default = {"eeufspec": r"keV$\mathdefault{^2}$ (Photons cm$^\mathdefault{-2}$ s$^\mathdefault{-1}$ keV$^\mathdefault{-1}$)",
                                   "eemmodel": "$EF_\mathdefault{E}$ (keV$^2$)",
@@ -468,8 +477,10 @@ class Ytpx():
             ylabel_dic_fromKwargs = kwargs.get("ylabel_dic") if isinstance(
                 kwargs.get("ylabel_dic"), dict) else {}
             ylabel_dic = {**ylabel_dic_default, **ylabel_dic_fromKwargs}
-            ax.set_ylabel(ylabel_dic.get(
-                plotType, labels.get("y", "")), fontsize=10)
+            ylabel=self._dictGet(ylabel_dic, [plotType_input, plotType_orig], labels.get("y", ""))
+            ylabel_fontsize_fromKwargs=self._dictGet(kwargs.get("ylabel_fontsize_dic"), [plotType_input, plotType_orig])
+            ylabel_fontsize= ylabel_fontsize_fromKwargs if self._judgeReal(ylabel_fontsize_fromKwargs) else 10
+            ax.set_ylabel(ylabel, fontsize=ylabel_fontsize)
 
             fig.align_labels()
 
@@ -485,8 +496,8 @@ class Ytpx():
                     ys = data_tmp["ys"]
                     xe = data_tmp.get("xe", [0]*len(xs))
                     ye = data_tmp.get("ye", [0]*len(ys))
-                    marker_size = kwargs.get("marker_size_data", 0)
-                    elinewith = kwargs.get("elinewidth_data", 1)
+                    marker_size = kwargs.get("marker_size_data") # 0
+                    elinewith = kwargs.get("elinewidth_data") # 1
                     scatter_tmp = plt.scatter(
                         xs, ys, marker=marker, color=color, s=marker_size)
                     scatters.append(scatter_tmp)
@@ -507,8 +518,8 @@ class Ytpx():
                         x-xe_tmp for x, xe_tmp in zip(xs_tmp, xe_tmp)]+[xs_tmp[-1]+xe_tmp[-1]]
                     ys_step = [ys_tmp[0]]+ys_tmp
 
-                    marker_size = kwargs.get("marker_size_model", 0)
-                    elinewith = kwargs.get("elinewidth_model", 0.5)
+                    marker_size = kwargs.get("marker_size_model") # 0
+                    elinewith = kwargs.get("elinewidth_model") # 0.5
 
                     if kwargs.get("flag_modelStep") is True:
                         plt.step(xs_step, ys_step, color=color, linewidth=0.5,
@@ -525,13 +536,13 @@ class Ytpx():
                         plt.plot(xs, ys_comp, linestyle="dotted",
                                  color=color)
                 # plt.plot()
-            legend = legends_dic.get(plotType, legends_dic.get(plotType_input, []))+[""]*(plotGroup+1)
+            legend = self._dictGet(legends_dic, [plotType_input, plotType_orig], [])+[""]*(plotGroup+1)
             scatters_now = [scatters[ind] for ind, legend_name in enumerate(
                 legend) if len(legend_name) > 0]
             legend_now = [
                 legend_name for legend_name in legend if len(legend_name) > 0]
             if len(legend_now) > 0:
-                legends_sort_tmp = legends_sort+[plotGroup+1]*(plotGroup+1)
+                #legends_sort_tmp = legends_sort+[plotGroup+1]*(plotGroup+1)
                 scatters_tmp = sorted(
                     scatters_now, key=lambda x: legends_sort[scatters_now.index(x)])
                 legend_tmp = sorted(

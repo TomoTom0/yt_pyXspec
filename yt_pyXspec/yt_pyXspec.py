@@ -2,7 +2,7 @@
 import os
 import re
 import sys
-# import shutil
+import shutil
 import glob2
 import texttable
 import warnings
@@ -70,14 +70,14 @@ class Ytpx():
         Plot.addCommand("win 2")
         Plot.addCommand("loc 0.05 0.05 1 0.95")
 
-    def initMatplotlibRcParams(self, flag_forSldie=False):
+    def initMatplotlibRcParams(self, flag_forSlide=False):
         plt = self.plt
         plt.rcParams["figure.figsize"] = (3.14*2, 3.14*2*0.7)
         plt.rcParams["figure.dpi"] = 100  # 画像保存するときは300に
         plt.rcParams["savefig.dpi"] = 300  # 画像保存するときは300に
 
-        factor = 1.8 if flag_forSldie is True else 1
-        factor_size = 1.2 if flag_forSldie is True else 1
+        factor = 1.8 if flag_forSlide is True else 1
+        factor_size = 1.2 if flag_forSlide is True else 1
 
         plt.rcParams["font.family"] = "Times New Roman"  # 全体のフォントを設定
         plt.rcParams["mathtext.fontset"] = "stix"  # 数式のフォントを設定
@@ -95,9 +95,9 @@ class Ytpx():
         plt.rcParams["ytick.minor.size"] = 5*factor_size  # y軸補助目盛り線の長さ
         plt.rcParams["font.size"] = 14*factor  # フォントの大きさ
         plt.rcParams["axes.linewidth"] = 1.5*factor  # 囲みの太さ
-        plt.rcParams["axes.labelsize"] = "large" if flag_forSldie is True else "medium"
-        plt.rcParams["xtick.labelsize"] = "medium" if flag_forSldie is True else "medium"
-        plt.rcParams["ytick.labelsize"] = "medium" if flag_forSldie is True else "medium"
+        plt.rcParams["axes.labelsize"] = "large" if flag_forSlide is True else "medium"
+        plt.rcParams["xtick.labelsize"] = "medium" if flag_forSlide is True else "medium"
+        plt.rcParams["ytick.labelsize"] = "medium" if flag_forSlide is True else "medium"
 
     def loadXcm(self, xcm_path, verbose=0):
         if not os.path.isfile(xcm_path):
@@ -114,6 +114,21 @@ class Ytpx():
         self.Xset.chatter = orig_chatter
         self.xcm = xcm_path
         return True
+    
+    def saveXcm(self, xcm_path, overwrite=True):
+        if os.path.isdir(xcm_path):
+            print(f"{xcm_path} is directory")
+            return False
+        elif os.path.isfile(xcm_path) and overwrite is True:
+            tmp_name=xcm_path+".copy"
+            shutil.copy(xcm_path, tmp_name)
+            try:
+                os.remove(xcm_path)
+                self.Xset.save(xcm_path)
+            except Exception as e:
+                os.rename(tmp_name,xcm_path)
+        else:
+            self.Xset.save(xcm_path)
 
     # # obtain_datass
     def obtain_datass_s_fromXcms(self, xcms=[], **kwargs_in):

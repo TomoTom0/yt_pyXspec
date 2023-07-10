@@ -9,6 +9,7 @@ import warnings
 import pyperclip
 import xspec
 import numpy as np
+import scipy
 import matplotlib.pyplot as _plt
 from matplotlib import gridspec
 
@@ -261,7 +262,7 @@ class Ytpx():
         return datass_new
 
     # # sub functions for plot
-    def __checkWritableFilePath(self, path):
+    def _checkWritableFilePath(self, path):
         if path is None:
             return False
         isFile_OK = (os.path.isfile(path) and os.access(path, os.W_OK))
@@ -269,7 +270,7 @@ class Ytpx():
                          [0]) and not os.path.exists(path))
         return isFile_OK or isNotExist_OK
 
-    def __extractValues(self, datas):
+    def _extractValues(self, datas):
         sum_dic = {}
         for key_xy in ["x", "y"]:
             valss = [s.get(key_xy+"s", []) for s in datas.values()]
@@ -287,7 +288,7 @@ class Ytpx():
             # ys_sum=sum([np.array(s["ys"]*2)+np.array(s["ye"]*2)*np.array([1]*len(s["ye"])+[-1]*len(s["ye"])) for s in data["eeu"].values()], [])
         return sum_dic  # {"xs":xs_sum, "ys":ys_sum}
 
-    def __obtainLim(self, values, logIsValid=True, margin_ratio=0.05):
+    def _obtainLim(self, values, logIsValid=True, margin_ratio=0.05):
         valid_values = [s for s in values if (not logIsValid) or s > 0]
         if len(valid_values) == 0:
             return []
@@ -366,6 +367,40 @@ class Ytpx():
     def _judgeReal(self, value):
         return isinstance(value, int) or isinstance(value, float)
 
+    def set_limsFromDatas(self, datas, ax=None, x_lim=None, y_lim=None, scaleIsLog=None):
+        # set lim
+        lims={}
+        data_sum = self._extractValues(datas)
+        if scaleIsLog is None:
+            if ax is None:
+                scaleIsLog={"x":True, "y":True}
+            else:
+                scaleIsLog = {
+                    "x": ax.get_xscale() == "log",
+                    "y": ax.get_yscale() == "log"
+                }
+        lims_fromValue = {
+            key_xy+"s": self._obtainLim(data_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
+            for key_xy in ["x", "y"]}
+        self.lims_fromValue=lims_fromValue
+        if len(lims_fromValue["ys"])==0:
+            lims_fromValue["ys"]=self._obtainLim(data_sum["ys_model"], logIsValid=scaleIsLog.get("y", True))
+        
+        lims["x"]=lims_fromValue["xs"]
+        lims["y"]=lims_fromValue["ys"]
+
+        #y_lim = self._dictGet(y_lims, [plotType_input, plotType_orig])
+        if hasattr(x_lim, "__iter__") and not len(x_lim) < 2:
+            lims["x"]=x_lim
+        if hasattr(y_lim, "__iter__") and not len(y_lim) < 2:
+            lims["y"]=y_lim
+        
+        if ax is not None:
+            ax.set_xlim(lims["x"])
+            ax.set_ylim(lims["y"])
+        
+        return lims
+
     # # plot datass
 
     def plot_datass(self,
@@ -401,7 +436,7 @@ class Ytpx():
         plt = self.plt
         default_exportImagePath = self.default_exportImagePath
         obtain_datass = self.obtain_datass
-        checkWritableFilePath = self.__checkWritableFilePath
+        checkWritableFilePath = self._checkWritableFilePath
         valid_exportImagePath = ([s for s in [
                                  exportImagePath, default_exportImagePath] if checkWritableFilePath(s)]+[None])[0]
         facecolor=kwargs.get("facecolor")
@@ -458,22 +493,8 @@ class Ytpx():
                 plt.axhline(0, ls=":", lw=1., color="black", alpha=1, zorder=0)
 
             # set lim
-            data_sum = self.__extractValues(datas)
-            scaleIsLog = {
-                "x": ax.get_xscale() == "log",
-                "y": ax.get_yscale() == "log"
-            }
-            lims_fromValue = {
-                key_xy+"s": self.__obtainLim(data_sum[key_xy+"s"], logIsValid=scaleIsLog.get(key_xy, True))
-                for key_xy in ["x", "y"]}
-            ax.set_xlim(lims_fromValue["xs"])
-            ax.set_ylim(lims_fromValue["ys"])
-
             y_lim = self._dictGet(y_lims, [plotType_input, plotType_orig])
-            if hasattr(x_lim, "__iter__") and not len(x_lim) < 2:
-                ax.set_xlim(x_lim)
-            if hasattr(y_lim, "__iter__") and not len(y_lim) < 2:
-                ax.set_ylim(y_lim)
+            self.set_limsFromDatas(datas, ax=ax, x_lim=x_lim, y_lim=y_lim)
 
             # set label
             labels = info.get("labels", "")
@@ -524,6 +545,7 @@ class Ytpx():
                     ys_model = data_tmp.get("ys_model", [])
                     # plt.plot(xs, ys_model, color=color)
                     # plt.scatter(xs, ys_model, color=color, marker="_")
+                    xe = data_tmp.get("xe", [0]*len(xs))
                     xems = sorted(zip(xs, xe, ys_model), key=lambda x: x[0])
                     xs_tmp = [s[0] for s in xems]
                     xe_tmp = [s[1] for s in xems]
@@ -785,3 +807,113 @@ class Ytpx():
                 f"\t\tThe following table is{string_method} returned, you will obtain the table by pasting it on spreadsheet.\n\n")
             print(table_total)
         return table_total
+
+
+    def plot_unabsModelAndDatass(self, xcm_path, compParams_abs, title=None, x_lim=None,
+                                 y_lim=None, exportImagePath=None, **kwargs_in):
+        plt = self.plt
+
+        kwargs_default = {
+            "linecolors": {},
+            "linestyles": {},
+            "colors": [],
+            "title": None,
+            "xlabel": None,
+            "ylabel": None,
+            "facecolor":"white"
+        }
+        kwargs = {**kwargs_default, **kwargs_in}
+        facecolor=kwargs.get("facecolor")
+
+        plot_type="eeufspec"
+        default_infos={"linecolor":"dimgray", "linestyle":"-", "color":"royalblue", "linestyles":["--", ":", ".-"]}
+
+        linecolors=kwargs.get("linecolors", {})
+        linestyles=kwargs.get("linecolors", {})
+        colors=kwargs.get("colors", {})
+
+        load_status = self.loadXcm(xcm_path)
+        if load_status is not True:
+            return False
+
+        # abs
+        datass_abs=self.obtain_datass(["eeu", "eem"])
+
+        fig, ax=plt.subplots()
+        ax.patch.set_facecolor(facecolor)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        
+        # set lim
+        lims = self.set_limsFromDatas(datass_abs[plot_type]["data"], ax=ax, x_lim=x_lim, y_lim=y_lim)
+        x_lim=lims["x"]
+
+        # unabs
+        model_tmp=self.AllModels(1)
+        for compParam in compParams_abs:
+            if len(compParam)<2:
+                continue
+            compName=compParam[0]
+            paramName=compParam[1]
+            if not compName in model_tmp.componentNames:
+                continue
+            comp_tmp=model_tmp.__dict__[compName]
+            if not paramName in comp_tmp.parameterNames:
+                continue
+            param_tmp=comp_tmp.__dict__[paramName]
+            param_tmp.values=0
+
+        ene_range=" ".join(map(str, x_lim))#"1e-3 20"
+        self.AllData.dummyrsp(ene_range)
+
+        datass_unabs=self.obtain_datass(["eem"])
+
+        data_unabs = datass_unabs["eemodel"]["data"][1]
+        unabs_xs=data_unabs["xs"]
+        unabs_ys_model=data_unabs["ys_model"]
+        unabs_eem_func = scipy.interpolate.interp1d(unabs_xs, unabs_ys_model)
+        #plt.plot(unabs_xs, unabs_eem_func(unabs_xs), color=linecolor)
+
+        if "ys_model" in data_unabs.keys():
+            linecolor=linecolors.get("model", default_infos.get("linecolor", "dimgray"))
+            linestyle=linestyles.get("model", default_infos.get("linestyle", "-"))
+            plt.plot(unabs_xs, unabs_ys_model, color=linecolor, linestyle=linestyle)
+
+        if "ys_comps" in data_unabs.keys() and "compNames" in data_unabs.keys():
+            for ind_comp, (compName, ys) in enumerate(zip(data_unabs["compNames"], data_unabs["ys_comps"])):
+                
+                linestyles_default=default_infos.get("linestyles")
+                linecolor=linecolors.get(compName, default_infos.get("linecolor"))
+                linestyle=linestyles.get(compName, linestyles_default[ind_comp%len(linestyles_default)])
+                plt.plot(unabs_xs, ys, color=linecolor, linestyle=linestyle, label=compName)
+            plt.legend(edgecolor="none")
+
+        colors_dict=dict(enumerate(colors))
+        for num_data, data in datass_abs[plot_type]["data"].items():
+            xs=data["xs"]
+            xe=data["xe"]
+            ys=data["ys"]
+            ye=data["ye"]
+            ys_model=data["ys_model"]
+            unabs_ys=[y/m*unabs_eem_func(x) for x,y,m in zip(xs, ys, ys_model)]
+            unabs_ye=[e/m*unabs_eem_func(x) for x,y,e,m in zip(xs, ys, ye, ys_model)]
+            color=colors_dict.get(int(num_data)-1, default_infos.get("color", "royalblue"))
+            plt.errorbar(xs, unabs_ys, xerr=xe, yerr=unabs_ye, color=color, elinewidth=1, alpha=0.5)
+            #plt.errorbar(xs, unabs_ys, unabs_ye)
+
+        title_in=kwargs.get("title")
+        title=os.path.basename(xcm_path).replace(".xcm", "") if title_in is None else title_in
+        ax.set_title(title)
+        ax.set_xlabel(datass_abs[plot_type]["info"]["labels"]["x"])
+        ax.set_ylabel(datass_abs[plot_type]["info"]["labels"]["y"])
+        
+        valid_exportImagePath = ([s for s in [
+                            exportImagePath, self.default_exportImagePath] if self._checkWritableFilePath(s)]+[None])[0]
+        
+        if valid_exportImagePath is not None:
+            fig.savefig(valid_exportImagePath, dpi=300,
+                        bbox_inches="tight", pad_inches=0.05)
+            print(f"Figure is saved as {valid_exportImagePath}")
+        
+        return fig, ax
+

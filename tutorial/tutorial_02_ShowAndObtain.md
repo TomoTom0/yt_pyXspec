@@ -3,6 +3,10 @@
 「yt_pyXspecを利用した効率化 Step1」に引き続き、yt_pyXspecの利用に関するTutorialを続ける。
 公式のpyXspecのドキュメントも要参考。「pyXspec XXX」の検索で簡単にアクセスできる。
 
+なお、前述の通り`xspec.AAA`として操作できる主要な要素は`ytpx.AAA`としてアクセスできる。さらに`xspec`自身も`ytpx.xspec`としてアクセスできる。
+以降では純粋なpyXspecでの操作の説明では`xspec.AAA`として記述するが、
+実用上は`ytpx.AAA`として構わない。
+
 ## 情報の表示・取得
 
 |関数|内容|
@@ -138,6 +142,6 @@ print(param.values)
 
 ## Fitting
 
-当然ながら、pyXspecでもFitting関連の操作ができる。
+pyXspecでもFitting関連の操作ができる。
 xspecでの`fit`は`xspec.Fit.perform()`、`error 1 2 3`は`xspec.Fit.error("1 2 3")`で実行できる。
 

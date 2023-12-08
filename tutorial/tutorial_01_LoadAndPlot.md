@@ -115,19 +115,19 @@ datass = ytpx.obtain_datass(["eeu", "del"])
             ...,
             6:{...}}
     },
-    "del":{...}
+    "delchi":{...}
 }
 
 ```
 
 additive componentsが1つだけの場合、`ys_comps`および`compNames`は(xspecの仕様に従い)省略される。
-また、plotするtypeがdelやratioの場合、データ点のみがplotされるので、`yd_model`、`ys_comps`および`compNames`は省略される。
+また、plotするtypeがdelやratioの場合、データ点のみがplotされるので、`ys_model`、`ys_comps`および`compNames`は省略される。
 
 これをmatplotlibに渡すことで、適当なグラフのplotもできる。
 
 ```python
-xs = datass["eeu"]["data"][1]["xs"]
-ys = datass["eeu"]["data"][1]["ys"]
+xs = datass["eeufspec"]["data"][1]["xs"]
+ys = datass["eeufspec"]["data"][1]["ys"]
 plt.xscale("log")
 plt.yscale("log")
 plt.scatter(xs, ys, s=5)

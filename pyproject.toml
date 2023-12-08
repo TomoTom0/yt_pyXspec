@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "yt-pyxspec"
+version = "0.2.0"
+description = "support pyXspec (in Heasarc) on jupyter with matplotlib"
+authors = ["TomoTom0 <tomoIris427+GitHub@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "yt_pyxspec"}]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+astropy = ">=5.1.1"
+numpy = ">=1.24.1"
+pandas = ">=1.4.3"
+texttable = ">=1.6.7"
+pyperclip = ">=1.8.2"
+scipy = ">=1.9.1"
+ipython = ">=8.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

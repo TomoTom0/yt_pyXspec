@@ -5,7 +5,7 @@ description = "support pyXspec (in Heasarc) on jupyter with matplotlib"
 authors = ["TomoTom0 <tomoIris427+GitHub@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "yt_pyxspec"}]
+packages = [{include = "yt_pyXspec"}]
 
 [tool.poetry.dependencies]
 python = ">=3.8"

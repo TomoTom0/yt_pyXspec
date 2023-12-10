@@ -1267,9 +1267,16 @@ class Ytpx:
         x_lim_large = lims_unabs["x"]
 
         # unabs
-
+        
+        x_lim_large_keV=sorted([
+            (s*astropy.units.__dict__[self.Plot.xAxis]).to(
+                astropy.units.keV,
+                equivalencies=astropy.units.spectral()
+            ).value for s in x_lim_large])
         self.set_params(compParams_abs)
-        ene_range = " ".join(map(str, x_lim_large))  # "1e-3 20"
+        ene_range = " ".join(map(str, 
+                                 x_lim_large_keV
+                                 ))  # "1e-3 20"
         self.AllData.dummyrsp(ene_range)
 
         datass_unabs = self.obtain_datass(["eem"])

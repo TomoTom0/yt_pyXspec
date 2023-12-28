@@ -72,6 +72,7 @@ def clearCell(seconds=0):
 def romanNumeral(num):
     return chr(0x215F + num)
 
+
 def injectSafeChar_forPath(phrase):
     pattern = r"[^0-9a-zA-Z\-_]"
     return re.sub(pattern, "-", phrase)
@@ -84,6 +85,7 @@ def convertUnit(vals, unit_from, unit_to):
         .value
         for s in vals
     ]
+
 
 class Ytpx:
     # # init
@@ -110,8 +112,8 @@ class Ytpx:
         self._sys: sys = _sys if _sys is not None else sys
         _sys = self._sys
         self.flag_cacheData: bool = flag_cacheData
-        
-        self.sio=io.StringIO()
+
+        self.sio = io.StringIO()
 
         self.__stdout__: sys.stdout = _sys.stdout
         self.__stderr__: sys.stderr = _sys.stderr
@@ -297,11 +299,14 @@ class Ytpx:
             plotType = plotType_orig
             plotWindow = tmp_plotWindow + 1
             datas = {}
-            label_replace_dic={"\\mathring{A}", "\\A"}
+            label_replace_dic = {"\\mathring{A}": "\\A"}
             datas_info = {
                 "labels": {
-                    key_xy: re.sub(r"\$([^\$]*)\$", r"$\\mathdefault{\1}$",
-                                   label.translate(str.maketrans(label_replace_dic)))
+                    key_xy: re.sub(
+                        r"\$([^\$]*)\$",
+                        r"$\\mathdefault{\1}$",
+                        label.translate(str.maketrans(label_replace_dic)),
+                    )
                     for key_xy, label in zip(["x", "y"], Plot.labels(plotWindow))
                 },
                 "title": Plot.labels(plotWindow)[2],
